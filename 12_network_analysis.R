@@ -75,9 +75,9 @@ names(node_size)<-hub_scores$gene_name[hub_scores$gene_name %in% as.character(V(
 node_size<-node_size[as.character(V(subnetwork)$name)]
 #### draw the global graph## 
 
-nm[which(node_size<0.5)]<-""
-myfill<-rep("yellow",length(node_size))
-myfill[which(node_size>0.5)]<-"orange"
+# nm[which(node_size<0.5)]<-""
+# myfill<-rep("yellow",length(node_size))
+# myfill[which(node_size>0.5)]<-"orange"
 
 #logfc for mapping 
 # color based on the celltypes
@@ -93,7 +93,7 @@ graph_tbl <- subnetwork %>%
 ########################################
 # plot graph
 ########################################
-ggraph(subnetwork,layout = "kk") +  #fr
+ggraph(subnetwork,layout = "kk") +  #fr kk
   geom_edge_link(colour = "gray",show.legend = FALSE,alpha=0.2) +
   geom_node_point(aes(size = node_size),color=myfill,shape=16,show.legend = FALSE) + 
   #scale_size(range = c(20, 30)) +
@@ -101,16 +101,17 @@ ggraph(subnetwork,layout = "kk") +  #fr
  # theme_graph()+
   #scale_size(range = c(1,6))+
   #geom_node_point(aes(size = centrality, colour = centrality)) + 
-geom_node_text(aes(label = nm), colour = 'black', vjust = -0.8) 
+geom_node_text(aes(label = nm), colour = 'black', vjust = -0.8)
+
+#scale_fill_manual(values =cluster.Colors[unique(res$Cell_type)], labels = as.character(unique(res$Cell_type)))+
+#theme_graph()
 
 
-                        
-
-########################################
+##################################################################################
 # systematic way of selecting genes to plot 
-########################################
+##################################################################################
 
-gene_pvalue_membership<-matrix(0,nrow=length(unique(res$gene_name)),ncol=length(cell_types))
+gene_pvalue_membership<-matrix(-1,nrow=length(unique(res$gene_name)),ncol=length(cell_types))
 rownames(gene_pvalue_membership)<-unique(res$gene_name)
 colnames(gene_pvalue_membership)<-cell_types
 
@@ -119,29 +120,185 @@ rownames(gene_logfc_membership)<-unique(res$gene_name)
 colnames(gene_logfc_membership)<-cell_types
 
 
+gene_membership<-matrix(0,nrow=length(unique(res$gene_name)),ncol=length(cell_types))
+rownames(gene_membership)<-unique(res$gene_name)
+colnames(gene_membership)<-cell_types
+
+
+selectedgenes_per_celltype<-array()
+
 for ( i in 1:length(cell_types))
 {
   print(i)
-  res_selected_ensm<-res %>% filter(Cell_type ==cell_types[i] & padj <= 0.05 & log2FoldChange>2)# 
+  
+  #rank (positive)
+  res_selected_ensm<-res %>% filter(Cell_type ==cell_types[i] & padj <= 0.1)# & padj <= 0.05 & log2FoldChange>2)# 
+  res_celltype<-res %>% filter(Cell_type ==cell_types[i])
+  res_celltype<-res_celltype[order(abs(res_celltype$log2FoldChange),-res_celltype$padj, decreasing = TRUE),]
+  
+  
+  res_selected_ensm<-res_selected_ensm[order(abs(res_selected_ensm$log2FoldChange),-res_selected_ensm$padj, decreasing = TRUE),]
   selected_ensm<-res_selected_ensm$STRING_id
+  selected_gene_name<-res_selected_ensm$gene_name
   
-  subnetwork<-string_db$get_subnetwork(selected_ensm)
-  V(subnetwork)$name<-names(aliases_map)[which(aliases_map %in% V(subnetwork)$name)]
+  gene_logfc_membership[selected_gene_name,cell_types[i]]<-res_selected_ensm$log2FoldChange [which(res_selected_ensm$gene_name %in% selected_gene_name)] 
+  gene_pvalue_membership[selected_gene_name,cell_types[i]]<-res_selected_ensm$padj [which(res_selected_ensm$gene_name %in% selected_gene_name)] 
+  gene_membership[selected_gene_name,cell_types[i]]<-c(1:length(selected_gene_name))
+  
+  
+  #rank negative
+  subnetwork<-string_db$get_subnetwork(res_celltype$STRING_id[res_celltype$Cell_type==cell_types[i]])
+  #V(subnetwork)$name<-names(aliases_map)[which(aliases_map %in% V(subnetwork)$name)]
   hs <- hub_score(subnetwork, weights=NA)$vector
-  hub_scores<-as.data.frame(hs)
-  hub_scores$gene_name<-rownames(hub_scores)
+  hs<-hs[order(hs,decreasing = TRUE)]
+  selected_hubs<-names(aliases_map)[which(aliases_map %in% names(hs))][1:20]
+ 
+  gene_membership[selected_hubs,cell_types[i]]<--1*c(1:length(selected_hubs))
+  gene_logfc_membership[selected_hubs,cell_types[i]]<-res_celltype$log2FoldChange [which(res_celltype$gene_name %in% selected_hubs)] 
+  gene_pvalue_membership[selected_hubs,cell_types[i]]<-res_celltype$padj [which(res_celltype$gene_name %in% selected_hubs)] 
   
-  as <- authority_score(subnetwork, weights=NA)$vector
-  authority_scores<-as.data.frame(as)
-  authority_scores$gene_name<-rownames(authority_scores)
+  sl<-c(selected_ensm[1:10],names(hs)[1:20])
+  
+  selectedgenes_per_celltype<-cbind(selectedgenes_per_celltype,sl)
+}
+
+colnames(gene_pvalue_membership)<-cell_types
+colnames(gene_logfc_membership)<-cell_types
+colnames(gene_membership)<-cell_types
+rownames(gene_pvalue_membership)<-unique(res$gene_name)
+rownames(gene_logfc_membership)<-unique(res$gene_name)
+rownames(gene_membership)<-unique(res$gene_name)
 
 
+selectedgenes_per_celltype<-selectedgenes_per_celltype[,-1]
+colnames(selectedgenes_per_celltype)<-cell_types
+
+selected_ensm<-unique(c(selectedgenes_per_celltype))
+
+subnetwork<-string_db$get_subnetwork(selected_ensm)
+V(subnetwork)$name<-names(aliases_map)[which(aliases_map %in% V(subnetwork)$name)]
+hs <- hub_score(subnetwork, weights=NA)$vector
+hub_scores<-as.data.frame(hs)
+hub_scores$gene_name<-rownames(hub_scores)
+hub_scores<-hub_scores[order(hub_scores[,"hs"],decreasing = TRUE),]
+as <- authority_score(subnetwork, weights=NA)$vector
+authority_scores<-as.data.frame(as)
+authority_scores$gene_name<-rownames(authority_scores)
+authority_scores<-authority_scores[order(authority_scores[,"as"],decreasing = TRUE),]
+node_size<-hub_scores$hs[hub_scores$gene_name %in% as.character(V(subnetwork)$name)]
+names(node_size)<-hub_scores$gene_name[hub_scores$gene_name %in% as.character(V(subnetwork)$name)]
+node_size<-node_size[as.character(V(subnetwork)$name)]
+#### draw the global graph## 
+
+
+
+
+
+
+cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D",
+                  "#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","#2C3E18","#745B48",
+                  "#AA5485","#4E747A","#C59A89","#C9C76F")   
+names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte",
+                         "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast",
+                         "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+
+#names(cluster.Colors)<-paste0(c(0:23),"_",names(cluster.Colors))
+
+
+
+
+myfill<-rep("#B0B0B0",length(node_size))
+names(myfill)<-names(node_size)
+#myfill[which(node_size>0.5)]<-"orange"
+
+
+summary_membership<-matrix(nrow=length(node_size),ncol=1)
+rownames(summary_membership)<-names(node_size)
+hub_genes<-c()
+for(x in names(node_size))
+  {
+  
+#  gene_pvalue_membership
+ # gene_logfc_membership
+  if( x %in% rownames(gene_membership))
+  {
+    
+    celltype_exits<-names(which(gene_membership[x,]!=0))
+    
+    
+    if(length(celltype_exits)==1) 
+    {
+      names(fc_celltype_exits)<-celltype_exits
+      fc_celltype_exits<-gene_logfc_membership[x,celltype_exits]
+      myfill[x]<-cluster.Colors[celltype_exits]
+    }
+    else if(length(celltype_exits)>1)
+    {
+      
+      fc_celltype_exits<-gene_logfc_membership[x,celltype_exits]
+      fc_celltype_exits<-fc_celltype_exits[order(abs(fc_celltype_exits),decreasing = TRUE)]
+      summary_membership[x,1]<-paste(names(fc_celltype_exits),sep=", ",collapse = ", ")
+      
+      
+      myfill[x]<-cluster.Colors[names(fc_celltype_exits)[1]]
+    }
+    
+  }
+  else
+    
+    hub_genes<-c(hub_genes,x)
+  
+  
 }
 
 
+# choose the color of nodes
 
 
- 
+#logfc for mapping 
+# color based on the celltypes
+#more genes 
+
+
+graph_tbl <- subnetwork %>% 
+  as_tbl_graph() %>% 
+  activate(nodes) %>% 
+  mutate(degree  = centrality_degree()) 
+
+
+
+## remove text for non-hub nodes
+nm<-V(subnetwork)$name
+nm[which(node_size<0.1)]<-""
+########################################
+# plot graph
+########################################
+ggraph(subnetwork,layout = "kk") +  #fr  kk
+  geom_edge_link(colour = "gray",show.legend = FALSE,alpha=0.2) +
+  geom_node_point(aes(size = node_size),color=myfill,shape=16,show.legend = FALSE) + 
+  #scale_size(range = c(20, 30)) +
+  #scale_color()+
+  # theme_graph()+
+  #scale_size(range = c(1,6))+
+  #geom_node_point(aes(size = centrality, colour = centrality)) + 
+  geom_node_text(aes(label = nm), colour = 'black', vjust = -0.8,label.size = 0.85)+
+  theme_bw()+
+  xlab("")+
+  ylab("")+
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.ticks.y = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_blank(),)
+#+scale_color_manual(values =cluster.Colors[unique(res$Cell_type)], labels = as.character(unique(res$Cell_type)))
+#+theme_graph()
+
+
+
+
+
+
 # for ( i in 1:length(cell_types))
 # {
 #   print(i)
