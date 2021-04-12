@@ -22,7 +22,7 @@ clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocy
 names(clust2Names)<-c(0:23)
 res$Cell_type<-clust2Names[res$Cell_type]
 
-
+res <- res %>% filter(!is.na(log2FoldChange))
 
 ################################################
 # string db
@@ -175,7 +175,13 @@ colnames(selectedgenes_per_celltype)<-cell_types
 
 selected_ensm<-unique(c(selectedgenes_per_celltype))
 
+remove<-aliases_map[which(names(aliases_map) %in% c("GUCY1A3", "GPR97",   "GPR126" ,"GIG25" ))]
+selected_ensm<-selected_ensm[!selected_ensm %in% remove]
+
 subnetwork<-string_db$get_subnetwork(selected_ensm)
+
+
+
 V(subnetwork)$name<-names(aliases_map)[which(aliases_map %in% V(subnetwork)$name)]
 hs <- hub_score(subnetwork, weights=NA)$vector
 hub_scores<-as.data.frame(hs)
@@ -215,6 +221,8 @@ names(myfill)<-names(node_size)
 summary_membership<-matrix(nrow=length(node_size),ncol=1)
 rownames(summary_membership)<-names(node_size)
 hub_genes<-c()
+log_fc_genes<-c()
+names_fc<-c()
 for(x in names(node_size))
   {
   
@@ -222,32 +230,54 @@ for(x in names(node_size))
  # gene_logfc_membership
   if( x %in% rownames(gene_membership))
   {
-    
     celltype_exits<-names(which(gene_membership[x,]!=0))
     
     
     if(length(celltype_exits)==1) 
     {
-      names(fc_celltype_exits)<-celltype_exits
-      fc_celltype_exits<-gene_logfc_membership[x,celltype_exits]
-      myfill[x]<-cluster.Colors[celltype_exits]
-    }
-    else if(length(celltype_exits)>1)
-    {
       
       fc_celltype_exits<-gene_logfc_membership[x,celltype_exits]
+      names(fc_celltype_exits)<-celltype_exits
+      pvalue_celltype_exits<-gene_pvalue_membership[x,celltype_exits]
+      #fc_celltype_exits<-fc_celltype_exits[which(pvalue_celltype_exits<0.1)]
+      log_fc_genes<-c(log_fc_genes,as.numeric(fc_celltype_exits))
+      myfill[x]<-cluster.Colors[celltype_exits]
+      names_fc<-c(names_fc,x)
+    }
+    
+    
+    else if(length(celltype_exits)>1)
+    {
+      fc_celltype_exits<-gene_logfc_membership[x,celltype_exits]
+      pvalue_celltype_exits<-gene_pvalue_membership[x,celltype_exits]
+      #fc_celltype_exits<-fc_celltype_exits[which(pvalue_celltype_exits<0.1)]
+      
       fc_celltype_exits<-fc_celltype_exits[order(abs(fc_celltype_exits),decreasing = TRUE)]
       summary_membership[x,1]<-paste(names(fc_celltype_exits),sep=", ",collapse = ", ")
       
       
       myfill[x]<-cluster.Colors[names(fc_celltype_exits)[1]]
+      log_fc_genes<-c(log_fc_genes,as.numeric(fc_celltype_exits)[1])
+      names_fc<-c(names_fc,x)
     }
-    
   }
-  else
     
-    hub_genes<-c(hub_genes,x)
+    
+if( ! x %in% rownames(gene_membership) || length(celltype_exits)==0)
+{
+  hub_genes<-c(hub_genes,x)
+  #which(res$gene_name ==x)
+  fcs<-res$log2FoldChange[which(res$gene_name ==x)]
+  adpvalues<-res$padj[which(res$gene_name ==x)]
+  fcs<-fcs[!is.na(adpvalues)]
+  adpvalues<-adpvalues[!is.na(adpvalues)]
+  if(length(adpvalues)==0)
+    log_fc_genes<-c(log_fc_genes,NA)
+  else
+    log_fc_genes<-c(log_fc_genes,fcs[which(adpvalues==min(adpvalues))])
   
+  names_fc<-c(names_fc,x)
+}
   
 }
 
@@ -260,19 +290,22 @@ for(x in names(node_size))
 #more genes 
 
 
-graph_tbl <- subnetwork %>% 
-  as_tbl_graph() %>% 
-  activate(nodes) %>% 
-  mutate(degree  = centrality_degree()) 
+# graph_tbl <- subnetwork %>% 
+#   as_tbl_graph() %>% 
+#   activate(nodes) %>% 
+#   mutate(degree  = centrality_degree()) 
 
 
-
+Centrality<-node_size
 ## remove text for non-hub nodes
 nm<-V(subnetwork)$name
-nm[which(node_size<0.1)]<-""
+nm[which(node_size<0.2)]<-""
 ########################################
 # plot graph
 ########################################
+
+
+# cell type colors
 ggraph(subnetwork,layout = "kk") +  #fr  kk
   geom_edge_link(colour = "gray",show.legend = FALSE,alpha=0.2) +
   geom_node_point(aes(size = node_size),color=myfill,shape=16,show.legend = FALSE) + 
@@ -294,6 +327,50 @@ ggraph(subnetwork,layout = "kk") +  #fr  kk
 #+scale_color_manual(values =cluster.Colors[unique(res$Cell_type)], labels = as.character(unique(res$Cell_type)))
 #+theme_graph()
 
+
+
+# log2fc gradient
+ggraph(subnetwork,layout = "kk") +  #fr  kk
+  geom_edge_link(colour = "gray",show.legend = FALSE,alpha=0.2) +
+  geom_node_point(aes(size = Centrality,color = log_fc_genes),shape=16,show.legend = TRUE,legend.title="centrality") +  #color=log_fc_genes
+  
+  scale_color_gradient(name = "log2FC",low = "blue", high = "red")+
+  #scale_colour_gradient(low="red",high = "blue") + #limits=c(-4, 5)
+  geom_node_text(aes(label = nm), colour = 'black', vjust = -0.8,label.size = 0.8)+
+  theme_bw()+
+  xlab("")+
+  ylab("")+
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),)
+
+
+
+myfill[which(myfill=="#B0B0B0")]<-"black"
+
+#names(myfill)<-names(node_size)
+
+# text color: cell type
+# node color: log2fc
+ggraph(subnetwork,layout = "fr") +  #fr  kk
+  geom_edge_link(colour = "gray",show.legend = FALSE,alpha=0.2) +
+  geom_node_point(aes(size = Centrality,color = log_fc_genes),shape=16,show.legend = TRUE,legend.title="centrality",stroke=2) +  #color=log_fc_genes
+  
+  scale_color_gradient2(name = "log2FC",low = "#333399", high = "#A50021",mid="white")+ 
+  #scale_colour_gradient(low="red",high = "blue") + #limits=c(-4, 5)
+  geom_node_text(aes(label = nm), colour = myfill, vjust = -1,label.size = 0.8)+
+  theme_bw()+
+  xlab("")+
+  ylab("")+
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),)
 
 
 
