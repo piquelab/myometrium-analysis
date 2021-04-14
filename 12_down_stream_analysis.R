@@ -30,13 +30,13 @@ res$cluster_colors<-cluster.Colors[res$Cell_type]
 res$Cell_type<-clust2Names[res$Cell_type]
 
 
-res<-res %>% filter(abs(log2FoldChange)>0 & padj< 0.1) #%>% select(gene_name,Cell_type)
-
-res <- res%>% mutate (DE=ifelse(abs(log2FoldChange)>0 & padj< 0.1 ,1,0))
 
 ################################################ 
 ### upset plot
 ################################################
+res<-res %>% filter(abs(log2FoldChange)>0 & padj< 0.1) #%>% select(gene_name,Cell_type)
+
+res <- res%>% mutate (DE=ifelse(abs(log2FoldChange)>0 & padj< 0.1 ,1,0))
 
 res_df<-matrix(0,nrow=length(unique(res$gene_name)),ncol=length(unique(res$Cell_type)))
 colnames(res_df)<-unique(res$Cell_type)
@@ -144,6 +144,80 @@ head(get_lfsr(m.c))
 
 #######################
 
+
+#############################################
+#meta plot 
+#############################################
+
+# selecting genes for meta plot 
+
+numsig.rel <- rowSums(lfsr_m.c<0.9)
+mytop <- (numsig.str==1 & numsig.rel==1)
+sum(mytop)
+
+
+nabstr <- rowSums(lfsr_m.c<0.01)
+nberel <- rowSums(lfsr_m.c>0.2)
+mytop <- (nabstr<3 & nabstr>1 & (nberel+nabstr>10))
+sum(mytop)
+
+mytop <- (nabstr<3 & nabstr>1 & (nberel+nabstr>8))
+sum(mytop)
+
+#mash_plot_meta(m.c,get_significant_results(m.c)[1])
+
+nabstr <- rowSums(lfsr_m.c<0.01)
+nberel <- rowSums(lfsr_m.c>0.2)
+mytop <- (nabstr<4 & nabstr>1 & (nberel+nabstr>12))
+sum(mytop)
+
+
+
+outFolder2<-"./8_outputs_DESeq_Plots/RNASeq/"
+outFolder2<-"./8_outputs_DESeq_Plots/DriverMap/"
+intersected_genes<-read.csv(paste0(outFolder2,"intersected_genes.csv"),stringsAsFactors = FALSE)
+
+#outFolder<-"12_downstream_analysis/DriverMap/"
+outFolder<-"12_downstream_analysis/RNASeq/"
+
+mytop<-rep(FALSE,length(rownames(lfsr_m.c)))
+names(mytop)<-rownames(lfsr_m.c)
+
+#some specific genes 
+sample_genes<-res$kbid[which(res$gene_name %in% hub_scores$gene_name[1:50])]
+#sample_genes<-res$kbid[which(res$gene_name %in% c("OXTR","COX2","CAM","Cx43","GJA1","PTGES2")) ]
+sample_genes<-res$kbid[which(res$gene_name %in% c("TCIRG1","ADAM15","MAP1B","PNPLA2","PLEKHO1","IFI16","HTRA1","FAM129A","CD52","EFHD2","CD82","ACOT7","WDR1","RRP9","OXTR","COX2","CAM","Cx43","GJA1","PTGES2","SCD")) ]
+
+sample_genes<-res$kbid[which(res$gene_name %in% c("MMP9","STOM","METTL9","MSR1","MCEMP1","TFDP1","TSTA3","GMPR","HK1","FOXO3","P2RX7","MYOF","ABCG1","OLR1")) ]
+
+sample_genes<-res$kbid[which(res$gene_name %in% unique(intersected_genes$gene_name)) ]
+mytop[which(names(mytop) %in%sample_genes)]<-TRUE
+
+# meta plot
+plot_func<-function(m.c,mytop,k=1)
+{
+  for ( k in 1:length(which(mytop)))
+  {
+    par(mar=c(2, 1 ,4 ,3))
+    i<-which(mytop)[k]
+    plot.title<-res$gene_name[which(res$kbid==names(i))[1]]
+    system(paste0("mkdir -p ",outFolder))
+    fname=paste0(outFolder,plot.title,".pdf");
+    pdf(fname,width=7,height=7)
+    
+    print(plot.title)
+    
+    metaplot(get_pm(m.c)[i,],get_psd(m.c)[i,],colors = meta.colors(box = as.character(cluster.Colors))
+             ,xlim = c(-1,1),xlab = "",ylab = "")
+    #legend("topleft",legend=as.character(unique(res$Cell_type)), fill=cluster.Colors[unique(res$Cell_type)],bty = "n",cex=0.8) #
+    title(plot.title)
+    dev.off()
+  }
+  
+  
+}
+
+
 # head(get_pm(m.c))
 # 
 # #posteriore standard deviation
@@ -249,65 +323,3 @@ dev.off()
 
 
 
-#############################################
-#meta plot 
-#############################################
-
-# selecting genes for meta plot 
-
-numsig.rel <- rowSums(lfsr_m.c<0.9)
-mytop <- (numsig.str==1 & numsig.rel==1)
-sum(mytop)
-
-
-nabstr <- rowSums(lfsr_m.c<0.01)
-nberel <- rowSums(lfsr_m.c>0.2)
-mytop <- (nabstr<3 & nabstr>1 & (nberel+nabstr>10))
-sum(mytop)
-
-mytop <- (nabstr<3 & nabstr>1 & (nberel+nabstr>8))
-sum(mytop)
-
-#mash_plot_meta(m.c,get_significant_results(m.c)[1])
-
-
-nabstr <- rowSums(lfsr_m.c<0.01)
-nberel <- rowSums(lfsr_m.c>0.2)
-mytop <- (nabstr<4 & nabstr>1 & (nberel+nabstr>12))
-sum(mytop)
-
-
-
-mytop<-rep(FALSE,length(rownames(lfsr_m.c)))
-names(mytop)<-rownames(lfsr_m.c)
-
-#some specific genes 
-x_hubs<-res$kbid[which(res$gene_name %in% hub_scores$gene_name[1:50])]
-#x_hubs<-res$kbid[which(res$gene_name %in% c("OXTR","COX2","CAM","Cx43","GJA1","PTGES2")) ]
-x_hubs<-res$kbid[which(res$gene_name %in% c("TCIRG1","ADAM15","MAP1B","PNPLA2","PLEKHO1","IFI16","HTRA1","FAM129A","CD52","EFHD2","CD82","ACOT7","WDR1","RRP9","OXTR","COX2","CAM","Cx43","GJA1","PTGES2","SCD")) ]
-
-
-mytop[which(names(mytop) %in%x_hubs)]<-TRUE
-
-# meta plot
-plot_func<-function(m.c,mytop,k=1)
-{
-  for ( k in 1:length(which(mytop)))
-  {
-    par(mar=c(2, 1 ,4 ,3))
-    i<-which(mytop)[k]
-    plot.title<-res$gene_name[which(res$kbid==names(i))[1]]
-    fname=paste0(outFolder,plot.title,".pdf");
-    pdf(fname,width=7,height=7)
-    
-    print(plot.title)
-    
-    metaplot(get_pm(m.c)[i,],get_psd(m.c)[i,],colors = meta.colors(box = as.character(cluster.Colors))
-             ,xlim = c(-1,1),xlab = "",ylab = "")
-    #legend("topleft",legend=as.character(unique(res$Cell_type)), fill=cluster.Colors[unique(res$Cell_type)],bty = "n",cex=0.8) #
-    title(plot.title)
-    dev.off()
-  }
-  
-  
-}
