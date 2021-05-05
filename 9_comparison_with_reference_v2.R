@@ -60,20 +60,30 @@ res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
 
 load_ref_data<-function(fl="CELLECTA.rds")
 {
-  
-  if (fl=="TL-TNL_21vs28")
+  if(fl=="TLvsTNL_blood_ENTREZ")
   {
-    ref_data <- read.csv("TL-TNL_21vs28.csv",stringsAsFactors = FALSE)
-    ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+    ref_data <- read.csv("TLvsTNL_blood_ENTREZ.csv",stringsAsFactors = FALSE)
+    ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
     colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
     ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
     return(ref_data)
     
   }
+  else 
+  if (fl=="TL-TNL_21vs28")
+  {
+    ref_data <- read.csv("TL-TNL_21vs28.csv",stringsAsFactors = FALSE)
+    ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+    colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
+    ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
+    return(ref_data)
+    
+  }
+  else 
   if (fl=="myometrium_term_TL-TNL_ALLList")
   {
     ref_data <- read.delim("myometrium_term_TL-TNL_ALLList.txt")
-    ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+    ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
     colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
     ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
     ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
@@ -83,7 +93,7 @@ load_ref_data<-function(fl="CELLECTA.rds")
   if(fl=="myometrium_bulk")
   {
     ref_data <- read_tsv("myo_bulk_TIN_TNL.txt")
-    ref_data<-ref_data %>% select(SYMBOL,FoldChange,pval.fdr,ENTREZ ,t)
+    ref_data<-ref_data %>% dplyr::select(SYMBOL,FoldChange,pval.fdr,ENTREZ ,t)
     colnames(ref_data) <- c("R.gene_name","R.Log2FC","Rpadj","ENTREZID","Rt")
     ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
     ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
@@ -93,7 +103,7 @@ load_ref_data<-function(fl="CELLECTA.rds")
   else if (fl=="PMID31921132")
   {
     ref_data<-read.delim("PMID31921132.txt")
-    ref_data<-ref_data %>% select(SYMBOL,FC,P.Value,adj.P.Val,ENTREZ,t )
+    ref_data<-ref_data %>% dplyr::select(SYMBOL,FC,P.Value,adj.P.Val,ENTREZ,t )
     colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
     ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
     ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
@@ -102,12 +112,13 @@ load_ref_data<-function(fl="CELLECTA.rds")
   else 
   {
     
+    fl<-paste0(fl,".rds")
     d<-readRDS(paste0("reference_Adi/",fl))
     ref_data<-d[["LaborEffect"]]
     if(fl=="PCR.rds")
-      ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,t)
+      ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,t)
     else
-      ref_data<-ref_data %>% select(SYMBOL,log2FoldChange,P.Value,adj.P.Val,t)
+      ref_data<-ref_data %>% dplyr::select(SYMBOL,log2FoldChange,P.Value,adj.P.Val,t)
     
     colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","Rt")
     return (ref_data)
@@ -123,35 +134,49 @@ load_ref_data<-function(fl="CELLECTA.rds")
 
 
 ## calculate the  correlation function
-cor_with_ref<-function(experiment="RNASeq",ref_cutoff="All",plotcolor=TRUE)
+cor_with_ref<-function(experiment="RNASeq",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All",ref_cutoff_cor="All")#,excludeNonDErepeat=FALSE)
 {
+  #if (experiment=="TLvsTNL_blood_ENTREZ")
   
-  if (experiment=="TL-TNL_21vs28")
-    ref_data<-load_ref_data(fl=experiment) 
-  else 
-  if (experiment=="myometrium_term_TL-TNL_ALLList")
-    ref_data<-load_ref_data(fl=experiment) 
-  else 
-    if(experiment=="PMID31921132")
-      ref_data<-load_ref_data(fl=experiment) 
-    else
-      if(experiment!="myometrium_bulk")
-        ref_data<-load_ref_data(fl=paste0(experiment,".rds")) 
-      else
-    ref_data <- load_ref_data(fl="myometrium_bulk")
-  
+  # else
+  #   if (experiment=="TL-TNL_21vs28")
+  #     ref_data<-load_ref_data(fl=experiment) 
+  #   else
+  #     if (experiment=="myometrium_term_TL-TNL_ALLList")
+  #       ref_data<-load_ref_data(fl=experiment)
+  #     # else
+      #   if(experiment=="PMID31921132")
+      #     ref_data<-load_ref_data(fl=experiment)
+      #   else
+      #     if(experiment!="myometrium_bulk")
+      #       ref_data<-load_ref_data(fl=paste0(experiment,".rds"))
+      #     else
+      #       ref_data <- load_ref_data(fl="myometrium_bulk")
+      # 
+      # 
+      
+    # if(experiment!="myometrium_bulk" & ! experiment %in% c("myometrium_term_TL-TNL_ALLList","TLvsTNL_blood_ENTREZ","myometrium_term_TL-TNL_ALLList","PMID31921132"))
+    #   ref_data<-load_ref_data(fl=paste0(experiment,".rds")) else ref_data<-load_ref_data(fl=experiment)
+    # 
+      
+    ref_data<-load_ref_data(fl=experiment)
+      
+      
     if(experiment=="CELLECTA")
-    outFolder<-paste0("./8_outputs_DESeq_Plots/DriverMap/",ref_cutoff,"/")  else outFolder<-paste0("./8_outputs_DESeq_Plots/", experiment,"/",ref_cutoff,"/")
+    outFolder<-paste0("./8_outputs_DESeq_Plots/DriverMap/","/singlecellcutoff_",singlecell_cutoff_cor,"_refcutoff_",ref_cutoff_scatter,"/")  else outFolder<-paste0("./8_outputs_DESeq_Plots/", experiment,"/singlecellcutoff_",singlecell_cutoff_cor,"_refcutoff_",ref_cutoff_scatter,"/")
     system(paste0("mkdir -p ",outFolder))
 
     
    # calculate the correlation 
   correlation_result<-sapply(unique(res$Cell_type),function(x){
     
+    print(x)
     result<-c(rep(NA,4))
     
     #res_intersect<-res %>% filter(!gene_name %in% ref_data$gene_name)
     res <- res %>% filter(!is.na(padj) & !is.na(log2FoldChange)& !is.na(ENTREZID))
+    res_focus<-res %>% filter(Cell_type==x)
+    
     res4 <- res %>% filter(padj<0.1)
     ref_data <- ref_data %>% filter(!is.na(Rpadj) & !is.na(R.Log2FC)& !is.na(ENTREZID))
     ref_data2 <- ref_data %>% filter(Rpadj<0.1)
@@ -162,9 +187,34 @@ cor_with_ref<-function(experiment="RNASeq",ref_cutoff="All",plotcolor=TRUE)
     
     res4 <- res4 %>% filter(Cell_type==x)
     
-    if (ref_cutoff!="All")
-    resJoin <- res4 %>% inner_join(ref_data2)  else resJoin <- res4 %>% inner_join(ref_data) 
+ 
+    
+    # #### previoous code #####
+    # if (singlecell_cutoff_cor=="All")
+    #   resJoin<-res_focus %>% inner_join(ref_data) else  resJoin <- res4 %>% inner_join(ref_data) 
+    # ###################################################################################################################
+    # 
+    
+    # if (excludeNonDErepeat)
+    # {
+    #   resJoin<-res4 %>% inner_join(ref_data)
+    #   resJoin <- resJoin %>% filter(Rpadj<0.1)
+    # }else {
+      if (singlecell_cutoff_cor=="All" & ref_cutoff_cor=="All")
+        resJoin<-res_focus %>% inner_join(ref_data)
       
+      if (singlecell_cutoff_cor!="All" & ref_cutoff_cor=="All")
+        resJoin<-res4 %>% inner_join(ref_data)
+      
+      
+      if (singlecell_cutoff_cor!="All" & ref_cutoff_cor!="All")
+        resJoin<-res4 %>% inner_join(ref_data2)
+      
+      if (singlecell_cutoff_cor=="All" & ref_cutoff_cor!="All")
+        resJoin<-res_focus %>% inner_join(ref_data2)
+      
+    #}
+    
     resJoin <- resJoin %>% filter(!is.na(padj))
     if(nrow(resJoin)>5)
     {
@@ -186,7 +236,7 @@ cor_with_ref<-function(experiment="RNASeq",ref_cutoff="All",plotcolor=TRUE)
       
       
       
-      if(ref_cutoff=="DE")
+      if(ref_cutoff_scatter=="DE")
       {
         
         resall_celltype <- res4 %>% filter(Cell_type==x)
@@ -249,6 +299,20 @@ cor_with_ref<-function(experiment="RNASeq",ref_cutoff="All",plotcolor=TRUE)
     }
     return (result)
   })
+  
+  rownames(correlation_result)<-c("spearman_cor","spearman_pvalue","pearson_cor","pearson_pvalue")
+  colnames(correlation_result)<-as.character(clust2Names[unique(res$Cell_type)])
+  correlation_result<-correlation_result[,which(!is.na(correlation_result[1,]))]
+  correlation_result<-t(correlation_result)
+  cell_type<-rownames(correlation_result)
+  correlation_result_df<-as.data.frame(correlation_result)
+  correlation_result_df$cell_type<-cell_type
+  
+  
+  write.csv(correlation_result,file=paste0(outFolder,"correlation_result.csv"))
+  
+  #if (excludeNonDErepeat) write.csv(correlation_result,file=paste0("./8_outputs_DESeq_Plots/", experiment,"/cutoff_cor_",singlecell_cutoff_cor,"_cutoff_scatter_",ref_cutoff_scatter,"/correlation_result_excludeNonDErepeat.csv")) else write.csv(correlation_result,file=paste0("./8_outputs_DESeq_Plots/", experiment,"/cutoff_cor_",singlecell_cutoff_cor,"_cutoff_scatter_",ref_cutoff_scatter,"/correlation_result.csv"))
+  
   return (correlation_result)
 
 }  
@@ -257,21 +321,38 @@ cor_with_ref<-function(experiment="RNASeq",ref_cutoff="All",plotcolor=TRUE)
 
 ### call the function to calculate the correlation:   
 
-correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",ref_cutoff="All")
-correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",ref_cutoff="DE")
-correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",ref_cutoff="All")
+
+singlecell_cutoff_cor<-"DE"
+#ref_cutoff_scatter<-"DE"
+ref_cutoff_scatter<-"All"
 
 
 
-rownames(correlation_result)<-c("spearman_cor","spearman_pvalue","pearson_cor","pearson_pvalue")
-colnames(correlation_result)<-as.character(clust2Names[unique(res$Cell_type)])
-correlation_result<-correlation_result[,which(!is.na(correlation_result[1,]))]
-correlation_result<-t(correlation_result)
-cell_type<-rownames(correlation_result)
-correlation_result_df<-as.data.frame(correlation_result)
-correlation_result_df$cell_type<-cell_type
-  
-write.csv(correlation_result,file=paste0(outFolder,"/",experiment,"/",ref_cutoff,"correlation_result.csv"))
+correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",singlecell_cutoff_cor="DE",ref_cutoff_scatter="DE")
+
+correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All")
+correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All")
+
+
+
+correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",singlecell_cutoff_cor="All",ref_cutoff_scatter="All")
+
+correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",singlecell_cutoff_cor="DE",ref_cutoff_scatter="DE")
+
+correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="All",ref_cutoff_scatter="All")
+
+correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="DE",ref_cutoff_scatter="DE")
+
+
+correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All",ref_cutoff_cor="All",excludeNonDErepeat=TRUE)
+
+correlation_result<-cor_with_ref(experiment="TLvsTNL_blood_ENTREZ",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All",ref_cutoff_cor="All") #,excludeNonDErepeat=FALSE)
+
+
+correlation_result<-cor_with_ref(experiment="TLvsTNL_blood_ENTREZ",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All",ref_cutoff_cor="All")#,excludeNonDErepeat=FALSE)
+
+correlation_result<-cor_with_ref(experiment="TLvsTNL_blood_ENTREZ",singlecell_cutoff_cor="All",ref_cutoff_scatter="All",ref_cutoff_cor="All")#,excludeNonDErepeat=FALSE)
+correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="All",ref_cutoff_scatter="All",ref_cutoff_cor="All")#,excludeNonDErepeat=FALSE)
 
 
   library(reshape2)
@@ -298,7 +379,10 @@ write.csv(correlation_result,file=paste0(outFolder,"/",experiment,"/",ref_cutoff
   #dat2$cluster <- factor(dat2$cluster,levels=unique(dat2$cluster))
   dat2<-dat2[order(dat2$clusternumber,decreasing = FALSE),]
   
-  fname=paste0(outFolder,"barplot_cor_v2.pdf")
+  #fname=paste0(outFolder,"barplot_cor_v2.pdf")
+  
+  fname=paste0("./8_outputs_DESeq_Plots/", experiment,"/singlecellcutoff_",singlecell_cutoff_cor,"refcutoff_",ref_cutoff_scatter,"/barplot_cor.pdf")
+  
   pdf(fname,width=12,height=6)
   ggplot(data=dat2, aes(x=cluster, y=value,fill=cluster)) +
     geom_bar(stat="identity",position="stack")+

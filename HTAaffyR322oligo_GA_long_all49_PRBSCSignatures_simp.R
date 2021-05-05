@@ -174,7 +174,7 @@ signature_plots<-function(SCGeneSets,outFolder="./13_Longitudinal_study/up_regul
   
   
   #f3(xx=toad,tg=tg[c(13,11,7),],nm="Sigs_sel.pdf")
-  f3(xx=toad,tg=tg,nm="Sigs_sel.pdf")
+  f3(xx=toad,tg=tg,nm="Sigs_sel_April20_2021.pdf")
   
 }
 

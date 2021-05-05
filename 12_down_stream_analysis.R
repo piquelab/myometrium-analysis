@@ -96,7 +96,7 @@ max(table(res$kbid))
 sum(table(res$kbid)==16)
 selgenes <- names(which(table(res$kbid)==16))
 
-Bhat<-res %>% filter(kbid %in% selgenes) %>% select(kbid,Cell_type,log2FoldChange) %>%
+Bhat<-res %>% filter(kbid %in% selgenes) %>% dplyr::select(kbid,Cell_type,log2FoldChange) %>%
   pivot_wider(names_from = Cell_type, values_from = log2FoldChange)
 rw<-Bhat$kbid
 Bhat<-as.matrix(Bhat)
@@ -104,7 +104,7 @@ rownames(Bhat)<-Bhat[,"kbid" ]
 Bhat<-Bhat[,-1]
 Bhat<-apply(Bhat,c(1,2),as.numeric)
 
-Shat<-res %>% filter(kbid %in% selgenes) %>% select(kbid,Cell_type,lfcSE) %>%
+Shat<-res %>% filter(kbid %in% selgenes) %>% dplyr::select(kbid,Cell_type,lfcSE) %>%
   pivot_wider(names_from = Cell_type, values_from = lfcSE)
 
 rw<-Shat$kbid
@@ -193,8 +193,86 @@ sample_genes<-res$kbid[which(res$gene_name %in% c("MMP9","STOM","METTL9","MSR1",
 sample_genes<-res$kbid[which(res$gene_name %in% unique(intersected_genes$gene_name)) ]
 mytop[which(names(mytop) %in%sample_genes)]<-TRUE
 
+
+
+##################################################################################
+#experiment<-"myometrium_term_TL-TNL_ALLList"
+experiment<-"TLvsTNL_blood_ENTREZ"
+
+
+ref_data<-load_ref_data(fl=experiment) 
+colnames(ref_data)[which(colnames(ref_data)=="R.gene_name")]<-"gene_name"
+ref_data2 <- ref_data %>% filter(Rpadj<0.1 &  !is.na(R.Log2FC) & !is.na(Rpadj))
+
+res4 <- res %>% filter(padj<0.1 &  !is.na(log2FoldChange) & !is.na(padj))
+
+resJoin<-res4 %>% inner_join(ref_data2)
+
+
+resJoin<-res4 %>% inner_join(ref_data)
+resJoin<-resJoin[!duplicated(resJoin[ , c("ENTREZID")]),]
+resJoin_stratified<-resJoin%>% mutate(Rpadj.stratified = p.adjust(Rpvalue,"fdr"))
+
+#resJoin_stratified<-resJoin %>% group_by(Cell_type) %>% mutate(Rpadj.stratified = p.adjust(Rpvalue,"fdr"))
+resJoin_stratified <- resJoin_stratified %>% filter(Rpadj.stratified<0.1 & !is.na(padj))
+
+resJoin_stratified_ref<-resJoin_stratified %>% dplyr::select(gene_name,R.Log2FC,Rpadj,Rpadj.stratified,ENTREZID)
+
+resJoin_stratified_full_list<-res4 %>% inner_join(resJoin_stratified_ref)
+
+resJoin_stratified_full_list<-resJoin_stratified_full_list %>% dplyr::select(kbid,ENTREZID,gene_name, Cell_type, log2FoldChange,lfcSE,pvalue,padj,R.Log2FC,Rpadj,Rpadj.stratified)
+
+
+write.csv( resJoin_stratified_full_list, file="12_downstream_analysis/TLvsTNL_blood_ENTREZ/resJoin_stratified_full_list_v2.csv")
+
+#write.csv( resJoin_stratified, file="8_outputs_DESeq_Plots/TLvsTNL_blood_ENTREZ/resJoin_stratified_v2.csv")
+
+
+resJoin<-resJoin_stratified
+
+# for (i in 1:length(unique(resJoin$Cell_type)))
+# {
+#   
+#   Cell_type<-unique(resJoin$Cell_type)[i]
+#   print(Cell_type)
+#   gene_select<-resJoin$gene_name[which(resJoin$Cell_type ==Cell_type)]
+#   mytop<-rep(FALSE,length(rownames(lfsr_m.c)))
+#   names(mytop)<-rownames(lfsr_m.c)
+#   sample_genes<-res$kbid[which(res$gene_name %in% unique(gene_select)) ]
+#   mytop[which(names(mytop) %in%sample_genes)]<-TRUE
+#   
+#   Cell_type<- gsub(" ", "_", Cell_type)
+#   
+#   
+#   system(paste0("mkdir -p ",paste0(outFolder,experiment,"/",Cell_type,"/")))
+#   plot_func(m.c,mytop,outFolder=paste0(outFolder,experiment,"/",Cell_type,"/"))
+#   
+#   
+#    system(paste0("mkdir -p ",paste0(outFolder,experiment,"/Normal/",Cell_type,"/")))
+#    plot_func(m.c,mytop,outFolder=paste0(outFolder,experiment,"/Normal/",Cell_type,"/"))
+#   
+#   
+#   # system(paste0("mkdir -p ",paste0(outFolder,experiment,"/stratified/",Cell_type,"/")))
+#   # plot_func(m.c,mytop,outFolder=paste0(outFolder,experiment,"/stratified/",Cell_type,"/"))
+#   }
+
+
+gene_select<-unique(resJoin_stratified$gene_name)
+mytop<-rep(FALSE,length(rownames(lfsr_m.c)))
+names(mytop)<-rownames(lfsr_m.c)
+sample_genes<-res$kbid[which(res$gene_name %in% unique(gene_select)) ]
+mytop[which(names(mytop) %in%sample_genes)]<-TRUE
+
+
+
+gene_select<-unique(resJoin_stratified$gene_name)
+
+system(paste0("mkdir -p ",paste0(outFolder,experiment,"/stratified_v2/")))
+plot_func(m.c,mytop,outFolder=paste0(outFolder,experiment,"/stratified_v2/"))
+##################################################################################
+
 # meta plot
-plot_func<-function(m.c,mytop,k=1)
+plot_func<-function(m.c,mytop,k=1,outFolder)
 {
   for ( k in 1:length(which(mytop)))
   {
@@ -323,3 +401,74 @@ dev.off()
 
 
 
+
+#############################################
+# load ref data 
+#############################################
+load_ref_data<-function(fl="CELLECTA.rds")
+{
+  if(fl=="TLvsTNL_blood_ENTREZ")
+  {
+    ref_data <- read.csv("TLvsTNL_blood_ENTREZ.csv",stringsAsFactors = FALSE)
+    ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+    colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
+    ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
+    return(ref_data)
+    
+  }
+  else 
+    if (fl=="TL-TNL_21vs28")
+    {
+      ref_data <- read.csv("TL-TNL_21vs28.csv",stringsAsFactors = FALSE)
+      ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+      colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
+      ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
+      return(ref_data)
+      
+    }
+  else 
+    if (fl=="myometrium_term_TL-TNL_ALLList")
+    {
+      ref_data <- read.delim("myometrium_term_TL-TNL_ALLList.txt")
+      ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+      colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
+      ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
+      ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
+      return(ref_data)
+    }
+  else
+    if(fl=="myometrium_bulk")
+    {
+      ref_data <- read_tsv("myo_bulk_TIN_TNL.txt")
+      ref_data<-ref_data %>% dplyr::select(SYMBOL,FoldChange,pval.fdr,ENTREZ ,t)
+      colnames(ref_data) <- c("R.gene_name","R.Log2FC","Rpadj","ENTREZID","Rt")
+      ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
+      ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
+      return(ref_data)
+    }
+  
+  else if (fl=="PMID31921132")
+  {
+    ref_data<-read.delim("PMID31921132.txt")
+    ref_data<-ref_data %>% dplyr::select(SYMBOL,FC,P.Value,adj.P.Val,ENTREZ,t )
+    colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
+    ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
+    ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
+    return (ref_data)
+  }
+  else 
+  {
+    
+    fl<-paste0(fl,".rds")
+    d<-readRDS(paste0("reference_Adi/",fl))
+    ref_data<-d[["LaborEffect"]]
+    if(fl=="PCR.rds")
+      ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,t)
+    else
+      ref_data<-ref_data %>% dplyr::select(SYMBOL,log2FoldChange,P.Value,adj.P.Val,t)
+    
+    colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","Rt")
+    return (ref_data)
+  }
+  
+}
