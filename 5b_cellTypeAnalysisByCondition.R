@@ -76,7 +76,7 @@ ccdiff <-  cc %>% group_by(seurat_clusters) %>% summarize(wilcox.pval = wilcox.t
     mutate(wilcox.padj = p.adjust(wilcox.pval))  
 
 ccdiff_filtered<-ccdiff %>% filter(wilcox.padj<0.1)
-#write.csv(ccdiff_filtered,file=paste0(outFolder,"/wilcox_result_sig.csv"))
+write.csv(ccdiff,file=paste0(outFolder,"/wilcox_result.csv"))
 
 
 #changed 

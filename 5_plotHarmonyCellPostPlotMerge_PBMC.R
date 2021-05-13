@@ -72,6 +72,8 @@ cc <- md %>% select(seurat_clusters,scLabor_ID) %>%
 
 
 
+
+
 aa <- FetchData(sc,c("UMAP_1","UMAP_2","seurat_clusters","Location","Condition","Origin","status","SNG.BEST.GUESS")) 
 aa$cluster_name <- clust2Name[as.character(aa$seurat_clusters)]
 # aa<-aa[order(as.numeric(aa$seurat_clusters),decreasing =TRUE),]

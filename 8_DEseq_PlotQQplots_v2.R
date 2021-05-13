@@ -46,6 +46,16 @@ res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
 
 
 
+res_basemean_total<-res%>% group_by(Cell_type) %>% summarise(total = n())
+
+res_basemean_basegreater<-res%>% group_by(Cell_type) %>% summarise(basemean_greater = sum(count(baseMean>100)))
+
+res_summary<-res_basemean_total %>% inner_join(res_basemean_basegreater) %>% mutate(percentage=round(basemean_greater/total,3))
+
+write.csv(res_summary,file="8_outputs_DESeq_Plots/res_basemean_percentage.csv")
+
+
+
 # Removing na pvalues
 # Grouping pvalues based on the Location,Cell_type,and Origin
 # Adding a column showing the rank of each pvalue devided by the number of pvalues in each group 

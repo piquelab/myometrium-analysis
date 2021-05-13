@@ -35,6 +35,20 @@ names(aliases_map)<-aliases$alias
 
 
 
+#############################################################
+# select genes from smooth muscle cell-1
+############################################################
+res<-res %>% filter(Cell_type=="Smooth muscle cells-1")
+
+
+res<-res %>% filter(padj <0.1)
+write.csv(res,file=paste0(outFolder,"DEpadj0.1_Smooth muscle cells-1.csv"))
+
+
+res<-res %>% filter(padj <=0.05)
+write.csv(res,file=paste0(outFolder,"DEpadj0.05_Smooth muscle cells-1.csv"))
+
+
 
 ########################################################################################################
 # plot graph consisting of DE genes

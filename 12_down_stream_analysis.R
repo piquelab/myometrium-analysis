@@ -87,6 +87,98 @@ res$cluster_colors<-cluster.Colors[res$Cell_type]
 res$Cell_type<-clust2Names[res$Cell_type]
 
 
+
+##########################################################################################
+#meta plot 
+##########################################################################################
+
+
+
+outFolder<-"12_downstream_analysis/"
+
+# load lfsr_m.c and m.c from mashr result
+lfsr_m.c<-read_rds(paste0(outFolder,"lfsr_m.c.rds"))
+m.c<-read_rds(paste0(outFolder,"m.c.rds"))
+
+
+# genes for meta plot
+
+mytop<-rep(FALSE,length(rownames(lfsr_m.c)))
+names(mytop)<-rownames(lfsr_m.c)
+# sample_genes<-res$kbid[which(res$gene_name %in% c("TCIRG1","ADAM15","MAP1B","PNPLA2","PLEKHO1","IFI16","HTRA1","FAM129A","CD52","EFHD2","CD82","ACOT7","WDR1","RRP9","OXTR","COX2","CAM","Cx43","GJA1","PTGES2","SCD")) ]
+#sample_genes<-res$kbid[which(res$gene_name == "ACTA2")]
+#sample_genes<-res$kbid[which(res$gene_name %in% c("LMOD1" , "GUCY1A1",  "GUCY1B1" ))]
+sample_genes<-res$kbid[which(res$gene_name %in% c("COL8A1","CSRP2","DCBLD2","DENR","	MFSD1","NDRG4","SENCR","SMCN1","SPON1","UNC45A","YIPF5"))]
+
+
+#res_select<-res %>% filter(padj<0.1 & !is.na(pvalue))
+
+#which(res_select$gene_name %in% c("COL8A1","CSRP2","DCBLD2","DENR","	MFSD1","NDRG4","SENCR","SMCN1","SPON1","UNC45A","YIPF5") )
+
+
+mytop[which(names(mytop) %in%sample_genes)]<-TRUE
+
+# meta plot
+plot_func<-function(m.c,mytop,k=1,outFolder)
+{
+  for ( k in 1:length(which(mytop)))
+  {
+    par(mar=c(2, 1 ,4 ,3))
+    i<-which(mytop)[k]
+    plot.title<-res$gene_name[which(res$kbid==names(i))[1]]
+    system(paste0("mkdir -p ",outFolder))
+    fname=paste0(outFolder,plot.title,".pdf");
+    pdf(fname,width=7,height=7)
+    
+    print(plot.title)
+    
+    metaplot(get_pm(m.c)[i,],get_psd(m.c)[i,],colors = meta.colors(box = as.character(cluster.Colors))
+             ,xlim = c(-1,1),xlab = "",ylab = "")
+    #legend("topleft",legend=as.character(unique(res$Cell_type)), fill=cluster.Colors[unique(res$Cell_type)],bty = "n",cex=0.8) #
+    title(plot.title)
+    dev.off()
+  }
+  
+  
+}
+
+
+system(paste0("mkdir -p ",paste0(outFolder,"smc_genes/")))
+# call to generate metaplots for all genes TRUE in mytop:
+plot_func(m.c,mytop,outFolder=paste0(outFolder,"smc_genes/"))
+
+
+# numsig.rel <- rowSums(lfsr_m.c<0.9)
+# mytop <- (numsig.str==1 & numsig.rel==1)
+# sum(mytop)
+# 
+# 
+# nabstr <- rowSums(lfsr_m.c<0.01)
+# nberel <- rowSums(lfsr_m.c>0.2)
+# mytop <- (nabstr<3 & nabstr>1 & (nberel+nabstr>10))
+# sum(mytop)
+# 
+# mytop <- (nabstr<3 & nabstr>1 & (nberel+nabstr>8))
+# sum(mytop)
+# 
+# nabstr <- rowSums(lfsr_m.c<0.01)
+# nberel <- rowSums(lfsr_m.c>0.2)
+# mytop <- (nabstr<4 & nabstr>1 & (nberel+nabstr>12))
+# sum(mytop)
+# 
+# 
+# 
+# intersected_genes<-read.csv(paste0(outFolder2,"intersected_genes.csv"),stringsAsFactors = FALSE)
+# #sample_genes<-res$kbid[which(res$gene_name %in% c("OXTR","COX2","CAM","Cx43","GJA1","PTGES2")) ]
+# sample_genes<-res$kbid[which(res$gene_name %in% hub_scores$gene_name[1:50])]
+# sample_genes<-res$kbid[which(res$gene_name %in% c("TCIRG1","ADAM15","MAP1B","PNPLA2","PLEKHO1","IFI16","HTRA1","FAM129A","CD52","EFHD2","CD82","ACOT7","WDR1","RRP9","OXTR","COX2","CAM","Cx43","GJA1","PTGES2","SCD")) ]
+# sample_genes<-res$kbid[which(res$gene_name %in% c("MMP9","STOM","METTL9","MSR1","MCEMP1","TFDP1","TSTA3","GMPR","HK1","FOXO3","P2RX7","MYOF","ABCG1","OLR1")) ]
+# sample_genes<-res$kbid[which(res$gene_name %in% unique(intersected_genes$gene_name)) ]
+# sample_genes<-res$kbid[which(res$gene_name %in% c("PRKG1", "PDE5A","PLN")) ]
+# 
+
+
+
 ########################################################################
 #### mash analysis 
 ########################################################################
@@ -131,7 +223,7 @@ print(names(U.c))
 ########################################################################
 m.c = mash(data, U.c)
 
-
+write_rds(m.c, paste0(outFolder,"m.c.rds"))
 ########################################################################
 #Extract Posterior Summaries
 ########################################################################
@@ -142,58 +234,9 @@ lfsr_m.c<-get_lfsr(m.c)
 
 head(get_lfsr(m.c))
 
+write_rds(lfsr_m.c, paste0(outFolder,"lfsr_m.c.rds"))
+
 #######################
-
-
-#############################################
-#meta plot 
-#############################################
-
-# selecting genes for meta plot 
-
-numsig.rel <- rowSums(lfsr_m.c<0.9)
-mytop <- (numsig.str==1 & numsig.rel==1)
-sum(mytop)
-
-
-nabstr <- rowSums(lfsr_m.c<0.01)
-nberel <- rowSums(lfsr_m.c>0.2)
-mytop <- (nabstr<3 & nabstr>1 & (nberel+nabstr>10))
-sum(mytop)
-
-mytop <- (nabstr<3 & nabstr>1 & (nberel+nabstr>8))
-sum(mytop)
-
-#mash_plot_meta(m.c,get_significant_results(m.c)[1])
-
-nabstr <- rowSums(lfsr_m.c<0.01)
-nberel <- rowSums(lfsr_m.c>0.2)
-mytop <- (nabstr<4 & nabstr>1 & (nberel+nabstr>12))
-sum(mytop)
-
-
-
-outFolder2<-"./8_outputs_DESeq_Plots/RNASeq/"
-outFolder2<-"./8_outputs_DESeq_Plots/DriverMap/"
-intersected_genes<-read.csv(paste0(outFolder2,"intersected_genes.csv"),stringsAsFactors = FALSE)
-
-#outFolder<-"12_downstream_analysis/DriverMap/"
-outFolder<-"12_downstream_analysis/RNASeq/"
-
-mytop<-rep(FALSE,length(rownames(lfsr_m.c)))
-names(mytop)<-rownames(lfsr_m.c)
-
-#some specific genes 
-sample_genes<-res$kbid[which(res$gene_name %in% hub_scores$gene_name[1:50])]
-#sample_genes<-res$kbid[which(res$gene_name %in% c("OXTR","COX2","CAM","Cx43","GJA1","PTGES2")) ]
-sample_genes<-res$kbid[which(res$gene_name %in% c("TCIRG1","ADAM15","MAP1B","PNPLA2","PLEKHO1","IFI16","HTRA1","FAM129A","CD52","EFHD2","CD82","ACOT7","WDR1","RRP9","OXTR","COX2","CAM","Cx43","GJA1","PTGES2","SCD")) ]
-
-sample_genes<-res$kbid[which(res$gene_name %in% c("MMP9","STOM","METTL9","MSR1","MCEMP1","TFDP1","TSTA3","GMPR","HK1","FOXO3","P2RX7","MYOF","ABCG1","OLR1")) ]
-
-sample_genes<-res$kbid[which(res$gene_name %in% unique(intersected_genes$gene_name)) ]
-mytop[which(names(mytop) %in%sample_genes)]<-TRUE
-
-
 
 ##################################################################################
 #experiment<-"myometrium_term_TL-TNL_ALLList"
@@ -213,7 +256,6 @@ resJoin<-res4 %>% inner_join(ref_data)
 resJoin<-resJoin[!duplicated(resJoin[ , c("ENTREZID")]),]
 resJoin_stratified<-resJoin%>% mutate(Rpadj.stratified = p.adjust(Rpvalue,"fdr"))
 
-#resJoin_stratified<-resJoin %>% group_by(Cell_type) %>% mutate(Rpadj.stratified = p.adjust(Rpvalue,"fdr"))
 resJoin_stratified <- resJoin_stratified %>% filter(Rpadj.stratified<0.1 & !is.na(padj))
 
 resJoin_stratified_ref<-resJoin_stratified %>% dplyr::select(gene_name,R.Log2FC,Rpadj,Rpadj.stratified,ENTREZID)
@@ -267,33 +309,16 @@ mytop[which(names(mytop) %in%sample_genes)]<-TRUE
 
 gene_select<-unique(resJoin_stratified$gene_name)
 
+
+system(paste0("mkdir -p ",paste0(outFolder,"smc-1/")))
+       
+plot_func(m.c,mytop,outFolder=paste0("mkdir -p ",paste0(outFolder,"smc-1/")))
+
 system(paste0("mkdir -p ",paste0(outFolder,experiment,"/stratified_v2/")))
 plot_func(m.c,mytop,outFolder=paste0(outFolder,experiment,"/stratified_v2/"))
 ##################################################################################
 
-# meta plot
-plot_func<-function(m.c,mytop,k=1,outFolder)
-{
-  for ( k in 1:length(which(mytop)))
-  {
-    par(mar=c(2, 1 ,4 ,3))
-    i<-which(mytop)[k]
-    plot.title<-res$gene_name[which(res$kbid==names(i))[1]]
-    system(paste0("mkdir -p ",outFolder))
-    fname=paste0(outFolder,plot.title,".pdf");
-    pdf(fname,width=7,height=7)
-    
-    print(plot.title)
-    
-    metaplot(get_pm(m.c)[i,],get_psd(m.c)[i,],colors = meta.colors(box = as.character(cluster.Colors))
-             ,xlim = c(-1,1),xlab = "",ylab = "")
-    #legend("topleft",legend=as.character(unique(res$Cell_type)), fill=cluster.Colors[unique(res$Cell_type)],bty = "n",cex=0.8) #
-    title(plot.title)
-    dev.off()
-  }
-  
-  
-}
+
 
 
 # head(get_pm(m.c))
