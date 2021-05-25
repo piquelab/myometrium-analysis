@@ -73,8 +73,13 @@ myscale = 1/colSums(sc@assays$RNA@counts)*1000000
 ##genesym=c("CD74","SELP","THBD","PECAM1","CD93","FLT1","CCL21")
 
 
-i <- "SMC" 
-genesym=c("ACTG2","MYH11","ACTA2","MYO1B","MYLK")
+i <- "SMC"
+
+genesym=c("PLN", "PDE5A", "MYLK", "MYH11", "LMOD1")
+genesym=c("LMOD1", "GUCY1A1", "GUCY1B1","ACTG2","MYH11","ACTA2","MYO1B","MYLK", "IGFBP5", "GUCY1A1", "JUN","PRKG1", "PDE5A", "PLN","COL8A1","CSRP2","DCBLD2","DENR","MFSD1","NDRG4","SENCR","SMCN1","SPON1","UNC45A","YIPF5" )
+
+#genesym=c("ACTG2","MYH11","ACTA2","MYO1B","MYLK")
+
 
 
 genesel <- filter(anno,gene_name %in% genesym)
@@ -92,7 +97,7 @@ genesel <- filter(anno,gene_name %in% genesym)
     cat(i,dim(genexpr),"\n")
     
   ##
-    fname=paste0(outFolder,"Ref_",i,"_umap.png");
+    fname=paste0(outFolder,"Ref_",i,"_umap2.png");
     ##png(fname,width=1000,height=800)
     p1 <- genexpr %>% arrange(symbol,expr) %>%
         ggplot(aes(UMAP_1,UMAP_2,color=log10(0.1+expr))) +

@@ -73,7 +73,8 @@ clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocy
 names(clust2Names)<-c(0:23)
 res$Cell_type<-clust2Names[res$Cell_type]
 
-res_genes<-res[res$gene_name %in% c("PRKG1", "PDE5A",  "PLN", "GUCY1A1", "GUCY1B1", "LMOD1", "JUN","IGFBP5"),]
+#res_genes<-res[res$gene_name %in% c("CALM1","CALM2","PRKG1", "PDE5A",  "PLN", "GUCY1A1", "GUCY1B1", "LMOD1", "JUN","IGFBP5"),]
+res_genes<-res[res$gene_name %in% c("CALM1","PPP1R16A","PRKG1", "PDE5A",  "PLN", "GUCY1A1", "GUCY1B1", "LMOD1", "JUN","IGFBP5"),]
 
 unique(res_genes$gene_name)
 
@@ -96,6 +97,6 @@ p <- res_genes %>%
 ##facet_grid(~gene_name ) 
 #facet_grid(gene_name ~  ,scales = "free_y",space="free") 
 
-ggsave(paste0(outFolder,"forestPlot_metaplot.pdf"),p,width=8,height=12)
+ggsave(paste0(outFolder,"forestPlot_metaplot_v2.pdf"),p,width=8,height=12)
 
 
