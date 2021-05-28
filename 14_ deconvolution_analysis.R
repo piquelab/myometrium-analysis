@@ -1,17 +1,51 @@
 
-
+library(tidyverse)
+library(dplyr)
 library(Seurat)
 library(Matrix)
 library(tidyverse)
-
 library(tidyverse)
 library(dplyr)
 library(stringr)
-
+library(DESeq2)
+library(enrichplot)
+library(dplyr)
+library(org.Hs.eg.db)
+library(ReactomePA)
+library(clusterProfiler)
 set.seed(0)
 
 outFolder <- paste0("./14_deconvolution_analysis/merge_subcelltypes/")
 system(paste0("mkdir -p ",outFolder))
+
+
+
+anno <- read_rds("3_MergeDemux_Output/anno.rds")
+# gene_symbol <- anno$gene_name
+# names(gene_symbol) <- anno$kbid
+
+ref_data <- read.delim("myometrium_term_TL-TNL_ALLList.txt")
+ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
+ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
+ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
+
+selected_genes<-ref_data %>% filter(abs(R.Log2FC)>=0.4 & Rpadj<=0.064) %>% dplyr::select ("R.gene_name") %>% unlist
+selected_genes<-unique(selected_genes)
+
+
+write.table(selected_genes, file=paste0(outFolder,'selected_1000genes.txt'), quote=FALSE, sep='\t',col.names = FALSE,row.names = FALSE)
+
+
+selected_genes<-ref_data %>% filter(Rpadj<=0.3) %>% dplyr::select ("R.gene_name") %>% unlist
+
+write.table(selected_genes, file=paste0(outFolder,'selected_6448genes.txt'), quote=FALSE, sep='\t',col.names = FALSE,row.names = FALSE)
+
+
+selected_genes<-ref_data %>% dplyr::select ("R.gene_name") %>% unlist
+
+write.table(selected_genes, file=paste0(outFolder,'selected_genes_all.txt'), quote=FALSE, sep='\t',col.names = FALSE,row.names = FALSE)
+
 
 ######################################################
 # bulk data
@@ -330,16 +364,313 @@ counts<-rbind(cl, counts)
 # cibersortx output
 ########################################################################################################################
 
-outFolder <- paste0("cibersortx_results/CIBERSORTx_Job12_output/")
+# outFolder <- paste0("cibersortx_results/CIBERSORTx_Job12_output/")
+# 
+# system(paste0("cat cibersortx_results/CIBERSORTx_Job12_output/README_Group.txt"))
+# list.files(outFolder)
+# 
+# Fractions<-read_delim(paste0(outFolder,"CIBERSORTxGEP_Job12_Fractions.txt"),delim = "\t")
+# GEP<-read_delim(paste0(outFolder,"CIBERSORTxGEP_Job12_GEPs.txt"),delim = "\t")
+# GEP_Weights<-read_delim(paste0(outFolder,"CIBERSORTxGEP_Job12_Weights.txt"),delim = "\t")
+# #SM_GEPs_Filtered<-read_delim(paste0(outFolder,"CIBERSORTxGEP_Job12_SM_GEPs_Filtered.txt"),delim = "\t")
+# GEPs_Filtered<-read_delim(paste0(outFolder,"CIBERSORTxGEP_Job12_GEPs_Filtered.txt"),delim = "\t")
+# 
+# GEP_lognorm<-GEP
+# GEP_lognorm[-1,-1]<-apply(GEP[-1,-1],c(1,2),function(x)return(log2(x)))
 
-system(paste0("cat cibersortx_results/CIBERSORTx_Job12_output/README_Group.txt"))
-list.files(outFolder)
 
-Fractions<-read_delim(paste0(outFolder,"CIBERSORTxGEP_Job12_Fractions.txt"),delim = "\t")
-GEP<-read_delim(paste0(outFolder,"CIBERSORTxGEP_Job12_GEPs.txt"),delim = "\t")
-GEP_Weights<-read_delim(paste0(outFolder,"CIBERSORTxGEP_Job12_Weights.txt"),delim = "\t")
-#SM_GEPs_Filtered<-read_delim(paste0(outFolder,"CIBERSORTxGEP_Job12_SM_GEPs_Filtered.txt"),delim = "\t")
-GEPs_Filtered<-read_delim(paste0(outFolder,"CIBERSORTxGEP_Job12_GEPs_Filtered.txt"),delim = "\t")
 
-GEP_lognorm<-GEP
-GEP_lognorm[-1,-1]<-apply(GEP[-1,-1],c(1,2),function(x)return(log2(x)))
+#######################
+# job 15: high resolution
+#######################
+
+
+# file enumerating the fractions of the different cell types in bulks samples. 
+
+# *_Fractions.txt:
+#CIBERSORTxGEP_Job15_Fractions.txt
+
+
+# CIBERSORTx Group Mode imputes representative cell type-specific expression 
+# profiles.In doing so, it generates a set of regression coefficients that 
+# represent the average expression value of each gene within each cell type across
+# the set (i.e., "group") of input mixture files.
+#*_GEPs.txt
+#CIBERSORTxGEP_Job15_GEPs.txt
+
+
+
+# high resolution results
+#CIBERSORTxHiRes_Job15_Plasmablast_Window20.txt // and other cell types
+
+HiResfiles <- list.files(paste0(outFolder,"CIBERSORTx_Job17_output/"),pattern="*_Window20.txt")
+
+#HiResfiles <- list.files(paste0(outFolder,"CIBERSORTx_Job15_output/"),pattern="*_Window20.txt")
+
+HiResfiles<-HiResfiles[c(-6,-8)]
+
+resList<-lapply(HiResfiles,function(x)
+  {
+  
+
+  celltype_gexp_samples<-read_delim(paste0("14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_output/",x),delim = "\t")
+  celltype<-unlist(strsplit(x,"_"))[3]
+  rw<-celltype_gexp_samples$GeneSymbol
+  cl<-colnames(celltype_gexp_samples)[-1]
+  celltype_gexp_samples<-as.matrix(celltype_gexp_samples)
+  celltype_gexp_samples<-celltype_gexp_samples[,-1]
+  rownames(celltype_gexp_samples)<-rw
+  colnames(celltype_gexp_samples)<-cl
+  conditions<-unlist(strsplit(cl,"_"))[seq(2,2*length(cl),by=2)]
+  samples<-colnames(celltype_gexp_samples)
+  cvt<-data.frame(Indiv=samples, Group=conditions)
+  
+  cleaned<-na.omit(celltype_gexp_samples)
+  
+  cleaned<-apply(cleaned, c(1,2),as.numeric)
+ 
+
+  cat("########## ",celltype,"\n")
+  
+  if(!all(cleaned==1))
+  {
+    
+    filterrow<-apply(cleaned, 1, function(x) if (all(x==1)) return (TRUE) else return(FALSE))
+    cleaned<-cleaned[!filterrow,]
+    if( nrow(cleaned)>0)
+    {
+      
+      #cleaned<-apply(cleaned, c(1,2),log2)
+      dds <- DESeqDataSetFromMatrix(round(cleaned),cvt, ~ Group)    
+      dds <- DESeq(dds,parallel=TRUE)
+      res <- results(dds)
+      #write_tsv(dds,paste0(outFolder,))
+      res$celltype<-rep(celltype,nrow(res))
+      res$symbol<-rownames(res)
+      as.data.frame(res)
+    }
+   
+  }
+  
+  
+  })
+
+outFolder<-paste0(outFolder,"CIBERSORTx_Job17_DEGs/")
+#outFolder<-paste0(outFolder,"CIBERSORTx_Job15_DEGs/")
+system(paste0("mkdir -p ",outFolder))
+
+res <- do.call(rbind,resList)
+
+colnames(res)[8]<-"gene_name"
+res<-as.data.frame(res)
+             
+   
+eg = bitr(res$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
+names(eg)[1]="gene_name"
+head(eg)
+e2g <- eg$gene_name
+names(e2g) <- eg$ENTREZID
+res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
+
+
+
+
+res %>% filter(padj<0.1,abs(log2FoldChange)>0) %>% dplyr::count(celltype) %>%
+  write_tsv(paste0(outFolder,"Summary.FDR.tsv"))
+
+res %>% write_tsv(paste0(outFolder,"ALL.combined.tsv"))
+
+res %>% filter(padj<0.1,abs(log2FoldChange)>0.0) %>%
+  write_tsv(paste0(outFolder,"SIG.combined.tsv"))
+
+res_deconBulk<-res %>% filter(padj<0.1,abs(log2FoldChange)>0) 
+
+####################################################################
+#  single vs bulk deconvoluted
+####################################################################
+
+
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+
+
+eg = bitr(res$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
+names(eg)[1]="gene_name"
+head(eg)
+e2g <- eg$gene_name
+names(e2g) <- eg$ENTREZID
+res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
+
+
+
+res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
+res <- res %>% filter(!is.na(pvalue))
+clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+clust2Names<-paste0(c(0:23),"_",clust2Names)
+names(clust2Names)<-c(0:23)
+
+res$Cell_type<-clust2Names[res$Cell_type]
+
+res_deconvBulk_SMC<-res_deconBulk %>% filter (celltype== "Smoothmusclecells" )
+res_single_cell_SMC<-res %>% filter (Cell_type== "12_Smooth muscle cells-1" )
+
+length(which(res_deconvBulk_SMC$ENTREZID %in% res_single_cell_SMC$ENTREZID))
+length(which(!res_deconvBulk_SMC$ENTREZID %in% res_single_cell_SMC$ENTREZID))
+length(which(! res_single_cell_SMC$ENTREZID %in% res_deconvBulk_SMC$ENTREZID))
+
+
+
+##############################################################################
+# ORA
+##############################################################################
+genes <- unique(c(res_deconvBulk_SMC$ENTREZID, res_single_cell_SMC$ENTREZID))
+
+
+
+genes <- unique(c(res_deconBulk$ENTREZID, res_single_cell_SMC$ENTREZID))
+
+
+
+geneUniv <- res %>% dplyr::select(ENTREZID) %>% unlist %>% unique
+geneUniv<-unique(c(geneUniv,genes))
+
+
+ego<- enrichGO(gene=genes,universe=geneUniv, OrgDb=org.Hs.eg.db,ont="BP")
+res_df_enrichGO<-ego@result
+res_df_enrichGO<-res_df_enrichGO%>% filter(p.adjust<0.1)
+res_df_enrichGO$GeneRatio<-sapply(res_df_enrichGO$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+pdf(paste0(outFolder,"enrichGO_decov_combined_singlecell_SMC_DotPlot.pdf"),width=10,height=4)
+ggplot(res_df_enrichGO, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) +
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+
+  xlab("GeneRatio")
+dev.off()
+
+
+enrichKEGG.res <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa")
+
+res_df_enrichKEGG<-enrichKEGG.res@result
+
+res_df_enrichKEGG<-res_df_enrichKEGG%>% filter(qvalue<0.1)
+
+
+# res_df_enrichKEGG$GeneRatio<-sapply(res_df_enrichKEGG$GeneRatio, function(x){
+#   numden<-unlist(strsplit(x,"/"))
+#   return (as.numeric(numden[1])/as.numeric(numden[2]))
+# })
+# 
+# enrichRPath.res <- enrichPathway(gene=genes,universe=geneUniv)
+# 
+# res_dfRPath<-enrichRPath.res@result
+# res_dfRPath<-res_dfRPath%>% filter(qvalue<0.1)
+# res_dfRPath$GeneRatio<-sapply(res_dfRPath$GeneRatio, function(x){
+#   numden<-unlist(strsplit(x,"/"))
+#   return (as.numeric(numden[1])/as.numeric(numden[2]))
+# })
+
+
+
+
+
+pdf(paste0(outFolder,"enrichRPath_combined_singlecell_SMC_DotPlot.pdf"),width=10,height=4)
+ggplot(res_dfRPath, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) + 
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+ 
+  xlab("GeneRatio") 
+dev.off()
+
+
+
+
+library(magrittr)
+library(clusterProfiler)
+
+gene<-genes
+#gene <- filter(res,padj<0.1,abs(log2FoldChange)>=0.5) %>% dplyr::select(ENTREZID) %>% unlist %>% unique
+
+wp2gene <- read.gmt("13_sample_investigation_plots/wikipathways-20191210-gmt-Homo_sapiens.gmt")
+#wp2gene <-read.gmt(wpgmtfile)
+
+wp2gene <- wp2gene %>% tidyr::separate(term, c("name","version","wpid","org"), "%")
+wpid2gene <- wp2gene %>% dplyr::select(wpid, gene) #TERM2GENE
+wpid2name <- wp2gene %>% dplyr::select(wpid, name) #TERM2NAME
+
+
+
+
+
+#"IGFBP5"  "GUCY1A1"      "JUN" 
+
+ewp <- enricher(gene, TERM2GENE = wpid2gene, TERM2NAME = wpid2name)
+head(ewp)
+
+
+res_dfewp<-ewp@result
+res_dfewp<-res_dfewp%>% filter(qvalue<0.1)
+res_dfewp$GeneRatio<-sapply(res_dfewp$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+
+pdf(paste0(outFolder,"enrichWiki_decov_combined_singlecell_SMC_DotPlot.pdf"),width=10,height=10)
+ggplot(res_dfewp, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) + 
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+ 
+  xlab("GeneRatio") 
+dev.off()
+
+
+
+res_dfewp$Description[1]
+
+genes_Myometrialpathway<-unlist(strsplit(res_dfewp$geneID[1],"/"))
+
+eg$gene_name[which(eg$ENTREZID %in% genes_Myometrialpathway)]
+
+ 
+##############################################################################
+# GSEA
+##############################################################################
+res <- read_tsv(paste0(outFolder,"ALL.combined.tsv"))
+res<-res %>% filter(celltype=="Smoothmusclecells")
+geneList <- -log10(res$pvalue)
+names(geneList) <- res$ENTREZID
+geneList = sort(geneList, decreasing = TRUE)
+
+gseGO.res <- gseGO(geneList,  OrgDb=org.Hs.eg.db,ont="BP")
+res_df_gseGO<-gseGO.res@result%>% filter(qvalues<=0.1)
+
+message("gsePathway")
+gseRPath.res <- gsePathway(geneList,pvalueCutoff = 1)
+print(head(gseRPath.res))
+
+res_df<-gseRPath.res@result
+which(res_df$ID =="R-HSA-445355")
+
+
+gseKEGG.res <-gseKEGG( geneList)
+res_df<-gseKEGG.res@result %>% filter(qvalues<=0.1) #[1:10,]
+

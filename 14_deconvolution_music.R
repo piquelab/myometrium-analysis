@@ -11,8 +11,8 @@ library(reshape)
 library(cowplot)
 library(pheatmap)
 
-outFolder <- paste0("./14_deconvolution_analysis_musci/")
-#outFolder <- paste0("./14_deconvolution_analysis_musci/merge_subcelltypes")
+#outFolder <- paste0("./14_deconvolution_analysis_music/")
+outFolder <- paste0("./14_deconvolution_analysis_music/merge_subcelltypes")
 system(paste0("mkdir -p ",outFolder))
 
 
@@ -137,76 +137,52 @@ save(Est.prop.myo,file=paste0(outFolder,"Est.prop.myo.RData"))
 
 
 
-#load(paste0("./14_deconvolution_analysis_musci/Est.prop.myo.RData"))
 
 
-prop.weighted<-Est.prop.myo$Est.prop.weighted
-rownames(prop.weighted)<-unlist(strsplit(rownames(prop.weighted),"_"))[seq(2,2*length(rownames(prop.weighted)),by=2)]
-
-prop.weighted<-t(prop.weighted)
-
-
-
-#lgFC=mean(prop.weighted[,colnames(prop.weighted)=="TL"])-mean(prop.weighted[,colnames(prop.weighted)=="TNL"]) 
-
-
-pvalues_celltypes<-sapply(rownames(prop.weighted), function(x){
-  pvalue=t.test(prop.weighted[x,colnames(prop.weighted)=="TL"],prop.weighted[x,colnames(prop.weighted)=="TNL"])$p.value 
-  pvalue
-  })
-
-pvalues_celltypes<-cbind(pvalues_celltypes,p.adjust(pvalues_celltypes,"fdr"))
-colnames(pvalues_celltypes)<-c("pvalue","pvalue.fdr")
-
-write.csv(pvalues_celltypes,paste0(outFolder,"prop.weighted_pvalues.csv"))
-
-
-
-
-prop.allgene<-Est.prop.myo$Est.prop.allgene
-rownames(prop.allgene)<-unlist(strsplit(rownames(prop.allgene),"_"))[seq(2,2*length(rownames(prop.allgene)),by=2)]
-
-prop.allgene<-t(prop.allgene)
-
-pvalues_celltypes<-sapply(rownames(prop.allgene), function(x){
-  pvalue=t.test(prop.allgene[x,colnames(prop.allgene)=="TL"],prop.allgene[x,colnames(prop.allgene)=="TNL"])$p.value 
-  pvalue
-})
-
-pvalues_celltypes<-cbind(pvalues_celltypes,p.adjust(pvalues_celltypes,"fdr"))
-colnames(pvalues_celltypes)<-c("pvalue","pvalue.fdr")
-
-write.csv(pvalues_celltypes,paste0(outFolder,"prop.allgene_pvalues.csv"))
-
-
-
-
-fname=paste0(outFolder,"heatmap_proportion_music.pdf");
-pdf(fname,width=7,height=7)
-pheatmap(Est.prop.myo$Est.prop.weighted,cluster_rows=TRUE,scale="none")
-dev.off()
-
-
-
-# Jitter_Est to show the difference between different estimation methods
-
-# jitter.fig = Jitter_Est(list(data.matrix(Est.prop.myo$Est.prop.weighted),
-#                              data.matrix(Est.prop.myo$Est.prop.allgene)),
-#                         method.name = c('MuSiC', 'NNLS'), title = 'Jitter plot of Est Proportions')
+# prop.weighted<-Est.prop.myo$Est.prop.weighted
+# rownames(prop.weighted)<-unlist(strsplit(rownames(prop.weighted),"_"))[seq(2,2*length(rownames(prop.weighted)),by=2)]
 # 
-#m.prop = rbind(melt(Est.prop.myo$Est.prop.weighted), melt(Est.prop.myo$Est.prop.allgene))
-# colnames(m.prop) = c('Sub', 'CellType', 'Prop')
-# m.prop$CellType = factor(m.prop$CellType, levels = clust2Name)
-# m.prop$Method = factor(rep(c('MuSiC', 'NNLS'), each = 39*24), levels = c('MuSiC', 'NNLS'))
+# prop.weighted<-t(prop.weighted)
 # 
-# m.prop$Disease = unlist(strsplit(as.character(m.prop$Sub),"_"))[seq(2,2*length(as.character(m.prop$Sub)),by=2)]
-# m.prop = rbind(subset(m.prop, Disease == 'TL'), subset(m.prop, Disease != 'TNL'))
 # 
-# jitter.new = ggplot(m.prop, aes(Method, Prop)) + 
-#   geom_point(aes(fill = Method, color = Disease, stroke = D, shape = Disease), 
-#              size = 2, alpha = 0.7, position = position_jitter(width=0.25, height=0)) +
-#   facet_wrap(~ CellType, scales = 'free') + scale_colour_manual( values = c('white', "gray20")) +
-#   scale_shape_manual(values = c(21, 24))+ theme_minimal()
 # 
-# plot_grid(jitter.fig, jitter.new, labels = 'auto')
+# 
+# 
+# pvalues_celltypes<-sapply(rownames(prop.weighted), function(x){
+#   pvalue=t.test(prop.weighted[x,colnames(prop.weighted)=="TL"],prop.weighted[x,colnames(prop.weighted)=="TNL"])$p.value 
+#   pvalue
+#   })
+# 
+# pvalues_celltypes<-cbind(pvalues_celltypes,p.adjust(pvalues_celltypes,"fdr"))
+# colnames(pvalues_celltypes)<-c("pvalue","pvalue.fdr")
+# 
+# write.csv(pvalues_celltypes,paste0(outFolder,"prop.weighted_pvalues.csv"))
+# 
+# 
+# 
+# 
+# prop.allgene<-Est.prop.myo$Est.prop.allgene
+# rownames(prop.allgene)<-unlist(strsplit(rownames(prop.allgene),"_"))[seq(2,2*length(rownames(prop.allgene)),by=2)]
+# 
+# prop.allgene<-t(prop.allgene)
+# 
+# pvalues_celltypes<-sapply(rownames(prop.allgene), function(x){
+#   pvalue=t.test(prop.allgene[x,colnames(prop.allgene)=="TL"],prop.allgene[x,colnames(prop.allgene)=="TNL"])$p.value 
+#   pvalue
+# })
+# 
+# pvalues_celltypes<-cbind(pvalues_celltypes,p.adjust(pvalues_celltypes,"fdr"))
+# colnames(pvalues_celltypes)<-c("pvalue","pvalue.fdr")
+# 
+# write.csv(pvalues_celltypes,paste0(outFolder,"prop.allgene_pvalues.csv"))
+# 
+# 
+# 
+# 
+# fname=paste0(outFolder,"heatmap_proportion_music.pdf");
+# pdf(fname,width=7,height=7)
+# pheatmap(Est.prop.myo$Est.prop.weighted,cluster_rows=TRUE,scale="none")
+# dev.off()
+# 
+# 
 # 

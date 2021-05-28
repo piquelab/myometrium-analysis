@@ -2,7 +2,7 @@
 library(Seurat)
 library(Matrix)
 library(tidyverse)
-
+library(dplyr)
 library(future)
 
 library(harmony)
@@ -30,7 +30,7 @@ sc <- read_rds("4_harmony/sc.NormByLibrary.Harmony.StringentFiltering.res0.8.rds
 md <- read_rds("./4_harmony_cellClass_PBMC/sc.NormByLocation.ref.Anchors.rds") %>%
     as.data.frame %>%
     rownames_to_column("BARCODES") %>%
-    select(BARCODES,scLabor_ID=predicted.celltype.l2,scLabor_Score=predicted.celltype.l2.score)
+    dplyr::select(BARCODES,scLabor_ID=predicted.celltype.l2,scLabor_Score=predicted.celltype.l2.score)
 
 
 
@@ -63,7 +63,7 @@ table(md$scLabor_ID, md$Location)
 table(md$SNG.BEST.GUESS, md$scLabor_ID)
 
 
-cc <- md %>% select(seurat_clusters,scLabor_ID) %>%
+cc <- md %>% dplyr::select(seurat_clusters,scLabor_ID) %>%
     group_by(seurat_clusters,scLabor_ID) %>%
     summarize(n=n()) %>%
     group_by(seurat_clusters) %>%
@@ -259,6 +259,9 @@ p2 <- ggplot(aa,aes(x=reorder(cluster_name,-seurat_clusters),fill=Condition)) +
 p2
 ##    theme_black()
 dev.off()
+
+cell_counts<-table(aa$cluster_name)
+write.csv(cell_counts,file=paste0(outFolder,"cluster_cell_counts.csv"))
 
 # fname=paste0(outFolder,"UMAP_LocationCondition.Barplot.pdf");
 # pdf(fname,width=10,height=6)
