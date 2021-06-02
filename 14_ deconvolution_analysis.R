@@ -1,4 +1,4 @@
-
+library(limma)
 library(tidyverse)
 library(dplyr)
 library(Seurat)
@@ -15,7 +15,7 @@ library(ReactomePA)
 library(clusterProfiler)
 set.seed(0)
 
-outFolder <- paste0("./14_deconvolution_analysis/merge_subcelltypes/")
+#outFolder <- paste0("./14_deconvolution_analysis/merge_subcelltypes/")
 system(paste0("mkdir -p ",outFolder))
 
 
@@ -250,59 +250,59 @@ names(clust2Name)<-c(0:23)
 # identical(md$BARCODES,rownames(sc@meta.data))
 
 ######################################################
-# count data
-counts<-sc@assays$RNA@counts
-rw<-anno$gene_name[which(anno$kbid %in% rownames(counts))]
-names(rw)<-anno$kbid[which(anno$kbid %in% rownames(counts))]
-counts<-counts[names(rw),]
-rownames(counts)<-as.character(rw)
-colnames(counts)<-as.character(clust2Name[sc$seurat_clusters[colnames(counts)]])
-
-write.table(counts, file='singlecell.scale.counts.txt', quote=FALSE, sep='\t', col.names = TRUE,row.names = TRUE)
-
-counts<-as.data.frame(counts)
-counts<-cbind(rownames(counts), counts)
-colnames(counts)[1]<-"GeneSymbol"
-cl<-colnames(counts)
-counts<-rbind(cl, counts)
-
-
-write.csv(counts,file=paste0(outFolder,"singlecell.scale.counts.csv"),col.names = cl)
-write.table(counts, file='singlecell.scale.counts.txt', quote=FALSE, sep='\t', col.names = TRUE,row.names = TRUE)
-
+# # count data
+# counts<-sc@assays$RNA@counts
+# rw<-anno$gene_name[which(anno$kbid %in% rownames(counts))]
+# names(rw)<-anno$kbid[which(anno$kbid %in% rownames(counts))]
+# counts<-counts[names(rw),]
+# rownames(counts)<-as.character(rw)
+# colnames(counts)<-as.character(clust2Name[sc$seurat_clusters[colnames(counts)]])
+# 
+# write.table(counts, file='singlecell.scale.counts.txt', quote=FALSE, sep='\t', col.names = TRUE,row.names = TRUE)
+# 
+# counts<-as.data.frame(counts)
+# counts<-cbind(rownames(counts), counts)
+# colnames(counts)[1]<-"GeneSymbol"
+# cl<-colnames(counts)
+# counts<-rbind(cl, counts)
+# 
+# 
+# write.csv(counts,file=paste0(outFolder,"singlecell.scale.counts.csv"),col.names = cl)
+# write.table(counts, file='singlecell.scale.counts.txt', quote=FALSE, sep='\t', col.names = TRUE,row.names = TRUE)
+# 
 
 ###########################################
-#random sampled  
-
-
-table(sc$seurat_clusters)
-random_samples<-sapply(unique(sc$seurat_clusters),function(x){
-  index<-names(sc$seurat_clusters) [which( sc$seurat_clusters==x)]
-  ln<-min(length(index),1000)
-  random_samples_celltype<-index[sample(ln)]
-  random_samples_celltype
-})
-
-random_samples<-unlist(random_samples)
-
-
-counts<-sc@assays$RNA@counts
-counts<-counts[,random_samples]
-
-rw<-anno$gene_name[which(anno$kbid %in% rownames(counts))]
-names(rw)<-anno$kbid[which(anno$kbid %in% rownames(counts))]
-counts<-counts[names(rw),]
-rownames(counts)<-as.character(rw)
-colnames(counts)<-as.character(clust2Name[sc$seurat_clusters[colnames(counts)]])
-
-write.table(counts, file='singlecell.random_cells.counts.txt', quote=FALSE, sep='\t', col.names = TRUE,row.names = TRUE)
-
-
-counts<-as.data.frame(counts)
-counts<-cbind(rownames(counts), counts)
-colnames(counts)[1]<-"GeneSymbol"
-cl<-colnames(counts)
-counts<-rbind(cl, counts)
+# #random sampled  
+# 
+# 
+# table(sc$seurat_clusters)
+# random_samples<-sapply(unique(sc$seurat_clusters),function(x){
+#   index<-names(sc$seurat_clusters) [which( sc$seurat_clusters==x)]
+#   ln<-min(length(index),1000)
+#   random_samples_celltype<-index[sample(ln)]
+#   random_samples_celltype
+# })
+# 
+# random_samples<-unlist(random_samples)
+# 
+# 
+# counts<-sc@assays$RNA@counts
+# counts<-counts[,random_samples]
+# 
+# rw<-anno$gene_name[which(anno$kbid %in% rownames(counts))]
+# names(rw)<-anno$kbid[which(anno$kbid %in% rownames(counts))]
+# counts<-counts[names(rw),]
+# rownames(counts)<-as.character(rw)
+# colnames(counts)<-as.character(clust2Name[sc$seurat_clusters[colnames(counts)]])
+# 
+# write.table(counts, file='singlecell.random_cells.counts.txt', quote=FALSE, sep='\t', col.names = TRUE,row.names = TRUE)
+# 
+# 
+# counts<-as.data.frame(counts)
+# counts<-cbind(rownames(counts), counts)
+# colnames(counts)[1]<-"GeneSymbol"
+# cl<-colnames(counts)
+# counts<-rbind(cl, counts)
 
 ######################################################
 # # scaled data
@@ -399,10 +399,14 @@ counts<-rbind(cl, counts)
 #CIBERSORTxGEP_Job15_GEPs.txt
 
 
-
+##################################################################################################################################
 # high resolution results
+
+##################################################################################################################################
 #CIBERSORTxHiRes_Job15_Plasmablast_Window20.txt // and other cell types
 
+
+outFolder <- paste0("./14_deconvolution_analysis/merge_subcelltypes/")
 HiResfiles <- list.files(paste0(outFolder,"CIBERSORTx_Job17_output/"),pattern="*_Window20.txt")
 
 #HiResfiles <- list.files(paste0(outFolder,"CIBERSORTx_Job15_output/"),pattern="*_Window20.txt")
@@ -440,14 +444,39 @@ resList<-lapply(HiResfiles,function(x)
     if( nrow(cleaned)>0)
     {
       
-      #cleaned<-apply(cleaned, c(1,2),log2)
-      dds <- DESeqDataSetFromMatrix(round(cleaned),cvt, ~ Group)    
-      dds <- DESeq(dds,parallel=TRUE)
-      res <- results(dds)
-      #write_tsv(dds,paste0(outFolder,))
+      cleaned<-apply(cleaned, c(1,2),log2)
+      pDat1<-matrix(conditions,nrow=ncol(cleaned),ncol=1)
+      colnames(pDat1)<-"title"
+      rownames(pDat1)<-colnames(cleaned)
+      aDFrame <- new("AnnotatedDataFrame",  data = as.data.frame(pDat1))
+      rownames(aDFrame)<-colnames(cleaned)
+
+      eset <- new("ExpressionSet", exprs = cleaned, phenoData=aDFrame)
+
+      f1 <- factor( rep("TL",dim(pDat1)[1]),  levels=c("TL","TNL"))
+      f1[ which(pDat1[,"title"] == "TNL" ) ] <- "TNL"
+      eset$description <- f1
+      design <- model.matrix(~ description + 0, eset)
+      colnames(design) <- levels(f1)
+      fit <- lmFit(eset, design)
+      cont.matrix <- makeContrasts(TL-TNL, levels=design)
+      fit2 <- contrasts.fit(fit, cont.matrix)
+      fit2 <- eBayes(fit2)
+      tT <- topTable(fit2, adjust="fdr", sort.by="p", number=dim(eset)[1])
+      res<-as.data.frame(tT)
       res$celltype<-rep(celltype,nrow(res))
       res$symbol<-rownames(res)
       as.data.frame(res)
+      
+      
+      # #deseq
+      # ##cleaned<-apply(cleaned, c(1,2),log2)
+      # dds <- DESeqDataSetFromMatrix(round(cleaned),cvt, ~ Group)
+      # dds <- DESeq(dds,parallel=TRUE)
+      # res <- results(dds)
+      # res$celltype<-rep(celltype,nrow(res))
+      # res$symbol<-rownames(res)
+      # as.data.frame(res)
     }
    
   }
@@ -455,8 +484,11 @@ resList<-lapply(HiResfiles,function(x)
   
   })
 
-outFolder<-paste0(outFolder,"CIBERSORTx_Job17_DEGs/")
-#outFolder<-paste0(outFolder,"CIBERSORTx_Job15_DEGs/")
+
+outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_limma_DEGs/")
+
+#outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/")
+
 system(paste0("mkdir -p ",outFolder))
 
 res <- do.call(rbind,resList)
@@ -464,7 +496,9 @@ res <- do.call(rbind,resList)
 colnames(res)[8]<-"gene_name"
 res<-as.data.frame(res)
              
-   
+
+
+
 eg = bitr(res$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
 names(eg)[1]="gene_name"
 head(eg)
@@ -472,7 +506,11 @@ e2g <- eg$gene_name
 names(e2g) <- eg$ENTREZID
 res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
 
+colnames(res)[which(colnames(res)=="adj.P.Val")]<-"padj"
+colnames(res)[which(colnames(res)=="logFC")]<-"log2FoldChange"
+colnames(res)[which(colnames(res)=="P.Value")]<-"pvalue"
 
+save(res,file=paste0(outFolder,"ALL.combined.RData"))   
 
 
 res %>% filter(padj<0.1,abs(log2FoldChange)>0) %>% dplyr::count(celltype) %>%
@@ -488,6 +526,26 @@ res_deconBulk<-res %>% filter(padj<0.1,abs(log2FoldChange)>0)
 ####################################################################
 #  single vs bulk deconvoluted
 ####################################################################
+
+#outFolder<-"./14_deconvolution_analysis/merge_subcelltypes/"
+load(paste0("14_deconvolution_analysis/merge_subcelltypes/genes_Myometrialpathway_decov_all_singlecell_SMC1_ORAwiki_myogenes.RData"))
+#save(genes_Myometrialpathway,file=paste0(outFolder,"genes_Myometrialpathway_decov_all_singlecell_SMC1_ORAwiki_myogenes.RData"))
+
+
+
+outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_limma_DEGs/")
+
+#outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/")
+
+
+res <- read_tsv(paste0(outFolder,"ALL.combined.tsv"))
+
+#res <- read_tsv(paste0("14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_DEGs/ALL.combined.tsv"))
+res_deconBulk<-res %>% filter(padj<0.1,abs(log2FoldChange)>0) 
+
+res_deconBulk_genes<-res_deconBulk %>% filter (gene_name %in% genes_Myometrialpathway) 
+write.csv(res_deconBulk_genes,file=paste0("14_deconvolution_analysis/merge_subcelltypes/genes_wikiMyometrialpathway.csv"))
+
 
 
 res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
@@ -520,13 +578,25 @@ length(which(! res_single_cell_SMC$ENTREZID %in% res_deconvBulk_SMC$ENTREZID))
 
 
 ##############################################################################
-# ORA
+# ORA - single cell and deconv bulk
 ##############################################################################
-genes <- unique(c(res_deconvBulk_SMC$ENTREZID, res_single_cell_SMC$ENTREZID))
+
+outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_limma_DEGs/")
+
+#outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/")
+
+res <- read_tsv(paste0(outFolder,"ALL.combined.tsv"))
+
+res_deconBulk<-res %>% filter(padj<0.1,abs(log2FoldChange)>0) 
+genes_deconvBulk_SMC<-res_deconvBulk_SMC %>%filter(padj <0.1 & abs(log2FoldChange)>0.5)%>% select(gene_name) %>% unlist %>% unique
 
 
 
-genes <- unique(c(res_deconBulk$ENTREZID, res_single_cell_SMC$ENTREZID))
+#genes <- unique(c(res_deconvBulk_SMC$ENTREZID, res_single_cell_SMC$ENTREZID))
+
+
+
+#genes <- unique(c(res_deconBulk$ENTREZID, res_single_cell_SMC$ENTREZID))
 
 
 
@@ -542,7 +612,9 @@ res_df_enrichGO$GeneRatio<-sapply(res_df_enrichGO$GeneRatio, function(x){
   return (as.numeric(numden[1])/as.numeric(numden[2]))
 })
 
-pdf(paste0(outFolder,"enrichGO_decov_combined_singlecell_SMC_DotPlot.pdf"),width=10,height=4)
+pdf(paste0(outFolder,"enrichGO_decov_combined_singlecell_SMC_DotPlot.pdf"),width=10,height=10)
+#pdf(paste0(outFolder,"enrichGO_decov_SMC_singlecell_SMC_DotPlot.pdf"),width=10,height=10)
+
 ggplot(res_df_enrichGO, # you can replace the numbers to the row number of pathway of your interest
        aes(x = GeneRatio, y = Description)) +
   geom_point(aes(size = GeneRatio, color = p.adjust)) +
@@ -563,24 +635,42 @@ res_df_enrichKEGG<-enrichKEGG.res@result
 res_df_enrichKEGG<-res_df_enrichKEGG%>% filter(qvalue<0.1)
 
 
-# res_df_enrichKEGG$GeneRatio<-sapply(res_df_enrichKEGG$GeneRatio, function(x){
-#   numden<-unlist(strsplit(x,"/"))
-#   return (as.numeric(numden[1])/as.numeric(numden[2]))
-# })
-# 
-# enrichRPath.res <- enrichPathway(gene=genes,universe=geneUniv)
-# 
-# res_dfRPath<-enrichRPath.res@result
-# res_dfRPath<-res_dfRPath%>% filter(qvalue<0.1)
-# res_dfRPath$GeneRatio<-sapply(res_dfRPath$GeneRatio, function(x){
-#   numden<-unlist(strsplit(x,"/"))
-#   return (as.numeric(numden[1])/as.numeric(numden[2]))
-# })
+res_df_enrichKEGG$GeneRatio<-sapply(res_df_enrichKEGG$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+pdf(paste0(outFolder,"enrichKEGG_decov_combined_singlecell_SMC_DotPlot.pdf-1_DotPlot.pdf"),width=6,height=4)
+#pdf(paste0(outFolder,"enrichKEGG_decov_SMC_singlecell_SMC_DotPlot.pdf-1_DotPlot.pdf"),width=6,height=4)
+ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) +
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw() +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab", limit = c(0.00001, 0.1))+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+
+  xlab("GeneRatio")
+dev.off()
 
 
 
 
+enrichRPath.res <- enrichPathway(gene=genes,universe=geneUniv)
 
+res_dfRPath<-enrichRPath.res@result
+res_dfRPath<-res_dfRPath%>% filter(qvalue<0.1)
+res_dfRPath$GeneRatio<-sapply(res_dfRPath$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+
+
+#pdf(paste0(outFolder,"enrichRPath_SMC_singlecell_SMC_DotPlot.pdf"),width=10,height=4)
 pdf(paste0(outFolder,"enrichRPath_combined_singlecell_SMC_DotPlot.pdf"),width=10,height=4)
 ggplot(res_dfRPath, # you can replace the numbers to the row number of pathway of your interest
        aes(x = GeneRatio, y = Description)) + 
@@ -627,9 +717,16 @@ res_dfewp$GeneRatio<-sapply(res_dfewp$GeneRatio, function(x){
   return (as.numeric(numden[1])/as.numeric(numden[2]))
 })
 
+# res_dfewp<-ewp@result
+# res_dfewp<-res_dfewp%>% filter(qvalue<=0.05)
+# res_dfewp$GeneRatio<-sapply(res_dfewp$GeneRatio, function(x){
+#   numden<-unlist(strsplit(x,"/"))
+#   return (as.numeric(numden[1])/as.numeric(numden[2]))
+# })
 
 
-pdf(paste0(outFolder,"enrichWiki_decov_combined_singlecell_SMC_DotPlot.pdf"),width=10,height=10)
+pdf(paste0(outFolder,"enrichWiki_decov_SMC_singlecell_SMC_DotPlot_0.05.pdf"),width=10,height=10)
+#pdf(paste0(outFolder,"enrichWiki_decov_combined_singlecell_SMC_DotPlot_0.05.pdf"),width=10,height=10)
 ggplot(res_dfewp, # you can replace the numbers to the row number of pathway of your interest
        aes(x = GeneRatio, y = Description)) + 
   geom_point(aes(size = GeneRatio, color = p.adjust)) +
@@ -650,12 +747,347 @@ genes_Myometrialpathway<-unlist(strsplit(res_dfewp$geneID[1],"/"))
 
 eg$gene_name[which(eg$ENTREZID %in% genes_Myometrialpathway)]
 
- 
+genes_Myometrialpathway<-eg$gene_name[which(eg$ENTREZID %in% genes_Myometrialpathway)]
+names(genes_Myometrialpathway)<-eg$ENTREZID[which(eg$ENTREZID %in% unlist(strsplit(res_dfewp$geneID[1],"/")))]
+save(genes_Myometrialpathway,file=paste0(outFolder,"genes_Myometrialpathway_decov_all_singlecell_SMC1_ORAwiki_myogenes.RData"))
+
+
+
+
+
+
 ##############################################################################
-# GSEA
+# ORA- Myofibroblast
 ##############################################################################
+
+outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_limma_DEGs/")
+
+#outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/")
+
+
 res <- read_tsv(paste0(outFolder,"ALL.combined.tsv"))
-res<-res %>% filter(celltype=="Smoothmusclecells")
+
+res_deconBulk<-res %>% filter(padj<0.1,abs(log2FoldChange)>0) 
+res_deconvBulk_Myofibroblast<-res_deconBulk %>% filter (celltype== "Myofibroblast" )
+
+
+#genes <- unique(c(res_deconvBulk_Myofibroblast$ENTREZID, res_single_cell_SMC$ENTREZID))
+genes <- as.character(unique(res_deconvBulk_Myofibroblast$ENTREZID))
+
+
+
+geneUniv <- as.character(res %>% dplyr::select(ENTREZID) %>% unlist %>% unique)
+#geneUniv<-unique(c(geneUniv,genes))
+
+
+ego<- enrichGO(gene=genes,universe=geneUniv, OrgDb=org.Hs.eg.db,ont="BP")
+res_df_enrichGO<-ego@result
+res_df_enrichGO<-res_df_enrichGO%>% filter(p.adjust<0.1)
+res_df_enrichGO$GeneRatio<-sapply(res_df_enrichGO$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+pdf(paste0(outFolder,"enrichGO_Myofibroblas_DotPlot.pdf"),width=10,height=10)
+
+ggplot(res_df_enrichGO, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) +
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+
+  xlab("GeneRatio")
+dev.off()
+
+
+enrichKEGG.res <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa")
+
+res_df_enrichKEGG<-enrichKEGG.res@result
+
+res_df_enrichKEGG<-res_df_enrichKEGG%>% filter(qvalue<0.1)
+
+
+res_df_enrichKEGG$GeneRatio<-sapply(res_df_enrichKEGG$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+pdf(paste0(outFolder,"enrichKEGG_Myofibroblas_DotPlot.pdf"),width=6,height=4)
+#pdf(paste0(outFolder,"enrichKEGG_decov_SMC_singlecell_SMC_DotPlot.pdf-1_DotPlot.pdf"),width=6,height=4)
+ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) +
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw() +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab", limit = c(0.00001, 0.1))+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+
+  xlab("GeneRatio")
+dev.off()
+
+
+
+
+enrichRPath.res <- enrichPathway(gene=genes,universe=geneUniv)
+
+res_dfRPath<-enrichRPath.res@result
+res_dfRPath<-res_dfRPath%>% filter(qvalue<0.1)
+res_dfRPath$GeneRatio<-sapply(res_dfRPath$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+
+
+#pdf(paste0(outFolder,"enrichRPath_SMC_singlecell_SMC_DotPlot.pdf"),width=10,height=4)
+pdf(paste0(outFolder,"enrichRPath_Myofibroblas_DotPlot.pdf"),width=10,height=4)
+ggplot(res_dfRPath, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) + 
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+ 
+  xlab("GeneRatio") 
+dev.off()
+
+
+
+
+library(magrittr)
+library(clusterProfiler)
+
+gene<-genes
+#gene <- filter(res,padj<0.1,abs(log2FoldChange)>=0.5) %>% dplyr::select(ENTREZID) %>% unlist %>% unique
+
+wp2gene <- read.gmt("13_sample_investigation_plots/wikipathways-20191210-gmt-Homo_sapiens.gmt")
+#wp2gene <-read.gmt(wpgmtfile)
+
+wp2gene <- wp2gene %>% tidyr::separate(term, c("name","version","wpid","org"), "%")
+wpid2gene <- wp2gene %>% dplyr::select(wpid, gene) #TERM2GENE
+wpid2name <- wp2gene %>% dplyr::select(wpid, name) #TERM2NAME
+
+
+
+
+
+#"IGFBP5"  "GUCY1A1"      "JUN" 
+
+ewp <- enricher(gene, TERM2GENE = wpid2gene, TERM2NAME = wpid2name)
+head(ewp)
+
+
+res_dfewp<-ewp@result
+res_dfewp<-res_dfewp%>% filter(qvalue<0.1)
+res_dfewp$GeneRatio<-sapply(res_dfewp$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+# res_dfewp<-ewp@result
+# res_dfewp<-res_dfewp%>% filter(qvalue<=0.05)
+# res_dfewp$GeneRatio<-sapply(res_dfewp$GeneRatio, function(x){
+#   numden<-unlist(strsplit(x,"/"))
+#   return (as.numeric(numden[1])/as.numeric(numden[2]))
+# })
+
+
+pdf(paste0(outFolder,"enrichWiki_decov_SMC_singlecell_SMC_DotPlot_0.05.pdf"),width=10,height=10)
+#pdf(paste0(outFolder,"enrichWiki_decov_combined_singlecell_SMC_DotPlot_0.05.pdf"),width=10,height=10)
+ggplot(res_dfewp, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) + 
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+ 
+  xlab("GeneRatio") 
+dev.off()
+
+
+
+##############################################################################
+# ORA- SMC
+##############################################################################
+
+outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_limma_DEGs/")
+
+#outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/")
+
+
+res <- read_tsv(paste0(outFolder,"ALL.combined.tsv"))
+
+res_deconBulk<-res %>% filter(padj<0.1,abs(log2FoldChange)>0) 
+res_deconvBulk_SMC<-res_deconBulk %>% filter (celltype== "Smoothmusclecells" )
+
+
+#genes <- unique(c(res_deconvBulk_Myofibroblast$ENTREZID, res_single_cell_SMC$ENTREZID))
+genes <- as.character(unique(res_deconvBulk_SMC$ENTREZID))
+
+
+
+geneUniv <- as.character(res %>% dplyr::select(ENTREZID) %>% unlist %>% unique)
+#geneUniv<-unique(c(geneUniv,genes))
+
+
+ego<- enrichGO(gene=genes,universe=geneUniv, OrgDb=org.Hs.eg.db,ont="BP")
+res_df_enrichGO<-ego@result
+res_df_enrichGO<-res_df_enrichGO%>% filter(p.adjust<0.1)
+res_df_enrichGO$GeneRatio<-sapply(res_df_enrichGO$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+pdf(paste0(outFolder,"enrichGO_SMC_DotPlot.pdf"),width=10,height=10)
+
+ggplot(res_df_enrichGO, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) +
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+
+  xlab("GeneRatio")
+dev.off()
+
+
+enrichKEGG.res <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa")
+
+res_df_enrichKEGG<-enrichKEGG.res@result
+
+res_df_enrichKEGG<-res_df_enrichKEGG%>% filter(qvalue<0.1)
+
+
+res_df_enrichKEGG$GeneRatio<-sapply(res_df_enrichKEGG$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+pdf(paste0(outFolder,"enrichKEGG_SMC_DotPlot.pdf"),width=6,height=4)
+#pdf(paste0(outFolder,"enrichKEGG_decov_SMC_singlecell_SMC_DotPlot.pdf-1_DotPlot.pdf"),width=6,height=4)
+ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) +
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw() +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab", limit = c(0.00001, 0.1))+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+
+  xlab("GeneRatio")
+dev.off()
+
+
+
+
+enrichRPath.res <- enrichPathway(gene=genes,universe=geneUniv)
+
+res_dfRPath<-enrichRPath.res@result
+res_dfRPath<-res_dfRPath%>% filter(qvalue<0.1)
+res_dfRPath$GeneRatio<-sapply(res_dfRPath$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+
+
+#pdf(paste0(outFolder,"enrichRPath_SMC_singlecell_SMC_DotPlot.pdf"),width=10,height=4)
+pdf(paste0(outFolder,"enrichRPath_SMC_DotPlot.pdf"),width=10,height=4)
+ggplot(res_dfRPath, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) + 
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+ 
+  xlab("GeneRatio") 
+dev.off()
+
+
+
+
+library(magrittr)
+library(clusterProfiler)
+
+gene<-genes
+#gene <- filter(res,padj<0.1,abs(log2FoldChange)>=0.5) %>% dplyr::select(ENTREZID) %>% unlist %>% unique
+
+wp2gene <- read.gmt("13_sample_investigation_plots/wikipathways-20191210-gmt-Homo_sapiens.gmt")
+#wp2gene <-read.gmt(wpgmtfile)
+
+wp2gene <- wp2gene %>% tidyr::separate(term, c("name","version","wpid","org"), "%")
+wpid2gene <- wp2gene %>% dplyr::select(wpid, gene) #TERM2GENE
+wpid2name <- wp2gene %>% dplyr::select(wpid, name) #TERM2NAME
+
+
+
+
+
+#"IGFBP5"  "GUCY1A1"      "JUN" 
+
+ewp <- enricher(gene, TERM2GENE = wpid2gene, TERM2NAME = wpid2name)
+head(ewp)
+
+
+res_dfewp<-ewp@result
+res_dfewp<-res_dfewp%>% filter(qvalue<0.1)
+res_dfewp$GeneRatio<-sapply(res_dfewp$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+# res_dfewp<-ewp@result
+# res_dfewp<-res_dfewp%>% filter(qvalue<=0.05)
+# res_dfewp$GeneRatio<-sapply(res_dfewp$GeneRatio, function(x){
+#   numden<-unlist(strsplit(x,"/"))
+#   return (as.numeric(numden[1])/as.numeric(numden[2]))
+# })
+
+
+pdf(paste0(outFolder,"enrichWiki_decov_SMC_singlecell_SMC_DotPlot_0.05.pdf"),width=10,height=10)
+#pdf(paste0(outFolder,"enrichWiki_decov_combined_singlecell_SMC_DotPlot_0.05.pdf"),width=10,height=10)
+ggplot(res_dfewp, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) + 
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+ 
+  xlab("GeneRatio") 
+dev.off()
+
+
+
+##############################################################################
+# GSEA SMC / Myofibroblast
+##############################################################################
+
+
+outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_limma_DEGs/")
+#outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/")
+
+
+res <- read_tsv(paste0(outFolder,"ALL.combined.tsv"))
+#res<-res %>% filter(celltype=="Smoothmusclecells")
+res<-res %>% filter(celltype=="Myofibroblast")
 geneList <- -log10(res$pvalue)
 names(geneList) <- res$ENTREZID
 geneList = sort(geneList, decreasing = TRUE)
@@ -663,14 +1095,329 @@ geneList = sort(geneList, decreasing = TRUE)
 gseGO.res <- gseGO(geneList,  OrgDb=org.Hs.eg.db,ont="BP")
 res_df_gseGO<-gseGO.res@result%>% filter(qvalues<=0.1)
 
+fname<-paste0(outFolder,"gseGO_Myofibroblast_DotPlot.png")
+#fname<-paste0(outFolder,"gseGO_SMC_DotPlot.png")
+p2<-ggplot(res_df_gseGO, 
+           aes(x = enrichmentScore, y = Description)) + 
+  geom_point(aes(size = enrichmentScore, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term" #enrichmentScore
+  ylab(NULL)+ 
+  theme_bw()
+#theme(axis.text=element_text(size=30),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
+#dev.off()
+ggsave(fname,p2,width=6,height=5)
+
+
+
 message("gsePathway")
 gseRPath.res <- gsePathway(geneList,pvalueCutoff = 1)
 print(head(gseRPath.res))
 
-res_df<-gseRPath.res@result
-which(res_df$ID =="R-HSA-445355")
+gseRPath.res<-gseRPath.res@result %>% filter(qvalues<=0.1) #[1:10,]
+
+fname<-paste0(outFolder,"/gsePathway_Myofibroblast.png")
+#fname<-paste0(outFolder,"/gsePathway_SMC_DotPlot.png")
+p3<-ggplot(gseRPath.res, # you can replace the numbers to the row number of pathway of your interest
+           aes(x = enrichmentScore, y = Description)) + 
+  geom_point(aes(size = enrichmentScore, color = p.adjust)) +
+  #theme_bw(base_size = 11) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL) +
+  theme_bw()
+ggsave(fname,p3,width=8,height=2)
+
+
+#which(gseRPath.res$ID =="R-HSA-445355")
 
 
 gseKEGG.res <-gseKEGG( geneList)
 res_df<-gseKEGG.res@result %>% filter(qvalues<=0.1) #[1:10,]
 
+fname<-paste0(outFolder,"gseKEGG.res_Myofibroblast_DotPlot.png")
+#pdf(paste0(outFolder_cname_plots,"gseKEGG.res_SMC_DotPlot.pdf"),width=10,height=10)
+p1<-ggplot(res_df, # you can replace the numbers to the row number of pathway of your interest
+           aes(x = enrichmentScore, y = Description)) + 
+  geom_point(aes(size = enrichmentScore, color = p.adjust)) +
+  #theme_bw(base_size = 11) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+
+  theme_bw()
+#theme(axis.text=element_text(size=30),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
+#dev.off()
+ggsave(fname,p1,width=8,height=5)
+
+
+
+ewp2 <- GSEA(geneList, TERM2GENE = wpid2gene, TERM2NAME = wpid2name, verbose=FALSE,pvalueCutoff = 1 )#,minGSSize=5, maxGSSize=3000,eps =0,pvalueCutoff = 1)
+head(ewp2)
+res_df_gsewiki<-ewp2@result%>% filter(qvalues<=0.1)
+
+
+
+
+
+##############################################################################
+# ORA- Bulk
+##############################################################################
+
+outFolder<-paste0("./14_deconvolution_analysis/bulk_enrichment/")
+system(paste0("mkdir -p ",outFolder))
+
+anno <- read_rds("3_MergeDemux_Output/anno.rds")
+
+ref_data <- read.delim("myometrium_term_TL-TNL_ALLList.txt")
+ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
+ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
+ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
+
+
+
+res_DE<-ref_data %>% filter(Rpadj<0.1,abs(R.Log2FC)>0) 
+
+
+
+
+genes <- as.character(unique(res_DE$ENTREZID))
+
+
+
+geneUniv <- as.character(ref_data %>% dplyr::select(ENTREZID) %>% unlist %>% unique)
+
+
+
+ego<- enrichGO(gene=genes,universe=geneUniv, OrgDb=org.Hs.eg.db,ont="BP")
+res_df_enrichGO<-ego@result
+res_df_enrichGO<-res_df_enrichGO%>% filter(p.adjust<0.1)
+res_df_enrichGO$GeneRatio<-sapply(res_df_enrichGO$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+res_df_enrichGO<-res_df_enrichGO%>% filter(p.adjust<0.05)
+res_df_enrichGO<-res_df_enrichGO[1:30,]
+
+pdf(paste0(outFolder,"enrichGO_bulk_DotPlot.pdf"),width=15,height=24)
+
+ggplot(res_df_enrichGO, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) +
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=30)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+
+  xlab("GeneRatio")
+dev.off()
+
+
+enrichKEGG.res <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa")
+
+res_df_enrichKEGG<-enrichKEGG.res@result
+
+res_df_enrichKEGG<-res_df_enrichKEGG%>% filter(qvalue<0.1)
+
+
+res_df_enrichKEGG$GeneRatio<-sapply(res_df_enrichKEGG$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+pdf(paste0(outFolder,"enrichKEGG_bulk_DotPlot.pdf"),width=6,height=4)
+#pdf(paste0(outFolder,"enrichKEGG_decov_SMC_singlecell_SMC_DotPlot.pdf-1_DotPlot.pdf"),width=6,height=4)
+ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) +
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw() +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab", limit = c(0.00001, 0.1))+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+
+  xlab("GeneRatio")
+dev.off()
+
+
+
+
+enrichRPath.res <- enrichPathway(gene=genes,universe=geneUniv)
+
+res_dfRPath<-enrichRPath.res@result
+res_dfRPath<-res_dfRPath%>% filter(qvalue<0.1)
+res_dfRPath$GeneRatio<-sapply(res_dfRPath$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+
+pdf(paste0(outFolder,"enrichRPath_bulk_DotPlot.pdf"),width=10,height=4)
+ggplot(res_dfRPath, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) + 
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+ 
+  xlab("GeneRatio") 
+dev.off()
+
+
+
+
+library(magrittr)
+library(clusterProfiler)
+
+gene<-genes
+wp2gene <- read.gmt("13_sample_investigation_plots/wikipathways-20191210-gmt-Homo_sapiens.gmt")
+
+wp2gene <- wp2gene %>% tidyr::separate(term, c("name","version","wpid","org"), "%")
+wpid2gene <- wp2gene %>% dplyr::select(wpid, gene) #TERM2GENE
+wpid2name <- wp2gene %>% dplyr::select(wpid, name) #TERM2NAME
+
+
+
+
+
+#"IGFBP5"  "GUCY1A1"      "JUN" 
+
+ewp <- enricher(gene, TERM2GENE = wpid2gene, TERM2NAME = wpid2name)
+head(ewp)
+
+
+res_dfewp<-ewp@result
+res_dfewp<-res_dfewp%>% filter(qvalue<0.1)
+res_dfewp$GeneRatio<-sapply(res_dfewp$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+# res_dfewp<-ewp@result
+# res_dfewp<-res_dfewp%>% filter(qvalue<=0.05)
+# res_dfewp$GeneRatio<-sapply(res_dfewp$GeneRatio, function(x){
+#   numden<-unlist(strsplit(x,"/"))
+#   return (as.numeric(numden[1])/as.numeric(numden[2]))
+# })
+
+
+pdf(paste0(outFolder,"enrichWiki_bulk_DotPlot_0.05.pdf"),width=10,height=10)
+#pdf(paste0(outFolder,"enrichWiki_decov_combined_singlecell_SMC_DotPlot_0.05.pdf"),width=10,height=10)
+ggplot(res_dfewp, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = GeneRatio, y = Description)) + 
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+ 
+  xlab("GeneRatio") 
+dev.off()
+
+
+##############################################################################
+# GSEA bulk
+##############################################################################
+
+
+outFolder<-paste0("./14_deconvolution_analysis/bulk_enrichment//")
+
+
+anno <- read_rds("3_MergeDemux_Output/anno.rds")
+
+ref_data <- read.delim("myometrium_term_TL-TNL_ALLList.txt")
+ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
+ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
+ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
+
+
+geneList <- -log10(ref_data$Rpvalue)
+names(geneList) <- ref_data$ENTREZID
+geneList = sort(geneList, decreasing = TRUE)
+
+gseGO.res <- gseGO(geneList,  OrgDb=org.Hs.eg.db,ont="BP")
+res_df_gseGO<-gseGO.res@result%>% filter(qvalues<=0.1)
+
+res_df_gseGO<-res_df_gseGO[1:30,]
+fname<-paste0(outFolder,"gseGO_bulk_DotPlot.png")
+p2<-ggplot(res_df_gseGO, 
+           aes(x = enrichmentScore, y = Description)) + 
+  geom_point(aes(size = enrichmentScore, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=30)) +
+  labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term" #enrichmentScore
+  ylab(NULL)+ 
+  theme_bw()
+#theme(axis.text=element_text(size=30),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
+#dev.off()
+ggsave(fname,p2,width=10,height=15)
+
+
+
+message("gsePathway")
+gseRPath.res <- gsePathway(geneList,pvalueCutoff = 1)
+print(head(gseRPath.res))
+
+gseRPath.res<-gseRPath.res@result %>% filter(qvalues<=0.1) #[1:10,]
+
+fname<-paste0(outFolder,"gsePathway_bulk.png")
+#fname<-paste0(outFolder,"/gsePathway_SMC_DotPlot.png")
+p3<-ggplot(gseRPath.res, # you can replace the numbers to the row number of pathway of your interest
+           aes(x = enrichmentScore, y = Description)) + 
+  geom_point(aes(size = enrichmentScore, color = p.adjust)) +
+  #theme_bw(base_size = 11) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=30)) +
+  labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL) +
+  theme_bw()
+ggsave(fname,p3,width=10,height=10)
+
+
+#which(gseRPath.res$ID =="R-HSA-445355")
+
+
+gseKEGG.res <-gseKEGG( geneList)
+res_df<-gseKEGG.res@result %>% filter(qvalues<=0.1) #[1:10,]
+
+res_df<-res_df[1:30,]
+fname<-paste0(outFolder,"gseKEGG.bulk_DotPlot.png")
+#pdf(paste0(outFolder_cname_plots,"gseKEGG.res_SMC_DotPlot.pdf"),width=10,height=10)
+p1<-ggplot(res_df, # you can replace the numbers to the row number of pathway of your interest
+           aes(x = enrichmentScore, y = Description)) + 
+  geom_point(aes(size = enrichmentScore, color = p.adjust)) +
+  #theme_bw(base_size = 11) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=30)) +
+  labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+
+  theme_bw()
+#theme(axis.text=element_text(size=30),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
+#dev.off()
+ggsave(fname,p1,width=10,height=10)
+
+
+
+ewp2 <- GSEA(geneList, TERM2GENE = wpid2gene, TERM2NAME = wpid2name, verbose=FALSE,pvalueCutoff = 1 )#,minGSSize=5, maxGSSize=3000,eps =0,pvalueCutoff = 1)
+head(ewp2)
+res_df_gsewiki<-ewp2@result%>% filter(qvalues<=0.1)
