@@ -546,6 +546,12 @@ pathway_enrich<-function(res_gene=res,cname_select ,padj_cutoff=0.1,log2FoldChan
     geneList = sort(geneList, decreasing = TRUE)
     #length(genes)
     
+    
+    wp2gene <- wp2gene %>% tidyr::separate(term, c("name","version","wpid","org"), "%")
+    wpid2gene <- wp2gene %>% dplyr::select(wpid, gene) #TERM2GENE
+    wpid2name <- wp2gene %>% dplyr::select(wpid, name) #TERM2NAME
+    
+    
     print(length(gene))
     
     if (length(gene)>0)

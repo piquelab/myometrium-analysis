@@ -265,19 +265,6 @@ write.csv(cell_counts,file=paste0(outFolder,"cluster_cell_counts.csv"))
 
 # fname=paste0(outFolder,"UMAP_LocationCondition.Barplot.pdf");
 # pdf(fname,width=10,height=6)
-# #p2 <- ggplot(aa,aes(x=reorder(cluster_name,-seurat_clusters),fill=Condition)) +
-# p2 <- ggplot(aa,aes(x=cluster_name ,y=Condition,fill=Condition)) +  
-#     #geom_bar(position = position_stack(reverse = TRUE)) +
-#     geom_bar (stat="identity", width = 0.9,position =position_dodge(width = 0.8))+
-#     ##    scale_color_manual(values=group.colors) +
-#     #guides(colour = guide_legend(override.aes = list(size=5),title="Condition")) +
-#     facet_grid(.~Location) + coord_flip() +
-#     scale_fill_manual(values=c("TNL"="#333399","TIL"="#A50021"))+
-#     xlab("")+
-#     theme_bw()
-# p2
-# ##    theme_black()
-# dev.off()
 
 
 ### END- HERE ###

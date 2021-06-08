@@ -13,6 +13,9 @@ library(dplyr)
 library(org.Hs.eg.db)
 library(ReactomePA)
 library(clusterProfiler)
+
+
+
 set.seed(0)
 
 #outFolder <- paste0("./14_deconvolution_analysis/merge_subcelltypes/")
@@ -227,7 +230,7 @@ colnames(singlecell.singature.avg)<-c("Gene symbol",unique(colnames(data)))
 
 write.table(singlecell.singature.avg, file=paste0(outFolder,'singlecell.singature.avg_exp.txt'), quote=FALSE, sep='\t', col.names = TRUE)
 
-
+singlecell.singature.avg<-read.delim("14_deconvolution_analysis/merge_subcelltypes/singlecell.singature.avg_exp.txt")
 
 
 anno <- read_rds("3_MergeDemux_Output/anno.rds")
@@ -543,8 +546,9 @@ res <- read_tsv(paste0(outFolder,"ALL.combined.tsv"))
 #res <- read_tsv(paste0("14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_DEGs/ALL.combined.tsv"))
 res_deconBulk<-res %>% filter(padj<0.1,abs(log2FoldChange)>0) 
 
-res_deconBulk_genes<-res_deconBulk %>% filter (gene_name %in% genes_Myometrialpathway) 
-write.csv(res_deconBulk_genes,file=paste0("14_deconvolution_analysis/merge_subcelltypes/genes_wikiMyometrialpathway.csv"))
+res_deconBulk_genes<-res_deconBulk %>% filter (ENTREZID %in% genes_Myometrialpathway) 
+#write.csv(res_deconBulk_genes,file=paste0("14_deconvolution_analysis/merge_subcelltypes/genes_wikiMyometrialpathway.csv"))
+write.csv(res_deconBulk_genes,file=paste0("14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/genes_bulk-deconv_wikiMyometrialpathway.csv"))
 
 
 
@@ -568,6 +572,12 @@ names(clust2Names)<-c(0:23)
 
 res$Cell_type<-clust2Names[res$Cell_type]
 
+
+res_singlecell_genes<-res %>% filter (ENTREZID %in% genes_Myometrialpathway) 
+write.csv(res_singlecell_genes,file=paste0("14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/genes_singlecell_wikiMyometrialpathway.csv"))
+
+
+
 res_deconvBulk_SMC<-res_deconBulk %>% filter (celltype== "Smoothmusclecells" )
 res_single_cell_SMC<-res %>% filter (Cell_type== "12_Smooth muscle cells-1" )
 
@@ -581,11 +591,41 @@ length(which(! res_single_cell_SMC$ENTREZID %in% res_deconvBulk_SMC$ENTREZID))
 # ORA - single cell and deconv bulk
 ##############################################################################
 
-outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_limma_DEGs/")
 
-#outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/")
+
+
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+
+
+eg = bitr(res$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
+names(eg)[1]="gene_name"
+head(eg)
+e2g <- eg$gene_name
+names(e2g) <- eg$ENTREZID
+res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
+
+
+
+res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
+res <- res %>% filter(!is.na(pvalue))
+clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+clust2Names<-paste0(c(0:23),"_",clust2Names)
+names(clust2Names)<-c(0:23)
+
+res$Cell_type<-clust2Names[res$Cell_type]
+res_single_cell_SMC<-res %>% filter (Cell_type== "12_Smooth muscle cells-1" )
+
+
+#outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_limma_DEGs/")
+
+outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/")
 
 res <- read_tsv(paste0(outFolder,"ALL.combined.tsv"))
+res_deconBulk<-res %>% filter(padj<0.1,abs(log2FoldChange)>0) 
+res_deconvBulk_SMC<-res_deconBulk %>% filter (celltype== "Smoothmusclecells" )
+
+#res <- read_tsv(paste0("14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_DEGs/ALL.combined.tsv"))
+
 
 res_deconBulk<-res %>% filter(padj<0.1,abs(log2FoldChange)>0) 
 genes_deconvBulk_SMC<-res_deconvBulk_SMC %>%filter(padj <0.1 & abs(log2FoldChange)>0.5)%>% select(gene_name) %>% unlist %>% unique
@@ -596,7 +636,7 @@ genes_deconvBulk_SMC<-res_deconvBulk_SMC %>%filter(padj <0.1 & abs(log2FoldChang
 
 
 
-#genes <- unique(c(res_deconBulk$ENTREZID, res_single_cell_SMC$ENTREZID))
+genes <- unique(c(res_deconBulk$ENTREZID, res_single_cell_SMC$ENTREZID))
 
 
 
@@ -745,10 +785,10 @@ res_dfewp$Description[1]
 
 genes_Myometrialpathway<-unlist(strsplit(res_dfewp$geneID[1],"/"))
 
-eg$gene_name[which(eg$ENTREZID %in% genes_Myometrialpathway)]
+#eg$gene_name[which(eg$ENTREZID %in% genes_Myometrialpathway)]
 
-genes_Myometrialpathway<-eg$gene_name[which(eg$ENTREZID %in% genes_Myometrialpathway)]
-names(genes_Myometrialpathway)<-eg$ENTREZID[which(eg$ENTREZID %in% unlist(strsplit(res_dfewp$geneID[1],"/")))]
+#genes_Myometrialpathway<-eg$ENTREZID[which(eg$ENTREZID %in% genes_Myometrialpathway)]
+#names(genes_Myometrialpathway)<-eg$ENTREZID[which(eg$ENTREZID %in% unlist(strsplit(res_dfewp$geneID[1],"/")))]
 save(genes_Myometrialpathway,file=paste0(outFolder,"genes_Myometrialpathway_decov_all_singlecell_SMC1_ORAwiki_myogenes.RData"))
 
 
@@ -1088,6 +1128,13 @@ outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job
 res <- read_tsv(paste0(outFolder,"ALL.combined.tsv"))
 #res<-res %>% filter(celltype=="Smoothmusclecells")
 res<-res %>% filter(celltype=="Myofibroblast")
+
+res_string<-res %>% filter(padj<=0.05) 
+
+write.csv(res_string,file=paste0(outFolder,"res_smc_limma.csv"))
+
+write.csv(res_string,file=paste0(outFolder,"res_myofibroblast_limma.csv"))
+
 geneList <- -log10(res$pvalue)
 names(geneList) <- res$ENTREZID
 geneList = sort(geneList, decreasing = TRUE)
@@ -1421,3 +1468,702 @@ ggsave(fname,p1,width=10,height=10)
 ewp2 <- GSEA(geneList, TERM2GENE = wpid2gene, TERM2NAME = wpid2name, verbose=FALSE,pvalueCutoff = 1 )#,minGSSize=5, maxGSSize=3000,eps =0,pvalueCutoff = 1)
 head(ewp2)
 res_df_gsewiki<-ewp2@result%>% filter(qvalues<=0.1)
+
+
+
+##############################################################################
+# Bulk after deconvolution- cell types separately  
+##############################################################################
+
+
+outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_limma_DEGs/")
+#outFolder<-paste0("./14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/")
+
+
+res <- read_tsv(paste0(outFolder,"ALL.combined.tsv"))
+geneList <- -log10(res$pvalue)
+names(geneList) <- res$ENTREZID
+geneList = sort(geneList, decreasing = TRUE)
+
+
+
+colnames(res)[which(colnames(res)=="celltype")]<-"Cell_type"
+
+
+pathway_enrich<-function(res_gene=res,cname_select ,padj_cutoff=0.1,log2FoldChange_cutoff=0)
+{
+  wp2gene <- read.gmt("13_sample_investigation_plots/wikipathways-20191210-gmt-Homo_sapiens.gmt")
+
+  print(cname_select)
+  print(cname_select)
+  
+  aux <- res_gene %>% filter(Cell_type==cname_select)
+  
+  if(nrow(aux)>0)
+  {
+    gene<-genes <- filter(aux,padj<padj_cutoff,abs(log2FoldChange)>log2FoldChange_cutoff) %>% dplyr::select(ENTREZID) %>% unlist
+    geneUniv <- aux %>% dplyr::select(ENTREZID) %>% unlist
+    ##geneList <- aux$log2FoldChange
+    geneList <- -log10(aux$pvalue)
+    names(geneList) <- aux$ENTREZID
+    geneList = sort(geneList, decreasing = TRUE)
+    #length(genes)
+    
+    
+    
+    
+    print(length(gene))
+    
+    if (length(gene)>0)
+    {
+      
+      
+      wp2gene <- wp2gene %>% tidyr::separate(term, c("name","version","wpid","org"), "%")
+      wpid2gene <- wp2gene %>% dplyr::select(wpid, gene) #TERM2GENE
+      wpid2name <- wp2gene %>% dplyr::select(wpid, name) #TERM2NAME
+      
+      ewp <- enricher(gene, TERM2GENE = wpid2gene, TERM2NAME = wpid2name)
+      
+      if (!is.null(ewp))
+      {
+        res_en<-ewp@result
+        res_en<-res_en%>%filter(p.adjust<0.1)
+        dim1<-nrow(res_en)
+        #print(dim1)
+        if(min(dim1,10)>0)
+        {
+          
+          
+          res_en<-res_en[1:min(dim1,10),c("ID","Description" ,"GeneRatio","p.adjust")]
+          res_en$Cell_type<-rep(cname_select,min(dim1,10))
+        }
+        return (res_en)
+      }
+      
+    }
+    
+  }
+  
+}
+
+res_enrichwikilist<-lapply(unique(res$Cell_type), function(x) {pathway_enrich(cname_select=x)})  
+res_df_enrichwiki <- do.call(rbind,res_enrichwikilist)
+
+res_df_enrichwiki$GeneRatio<-sapply(res_df_enrichwiki$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+#res_df_enrichwiki<-res_df_enrichwiki[1:20,]
+pdf(paste0(outFolder,"enrich_wikipathways_cname_DotPlot.pdf"),width=12,height=12)
+ggplot(res_df_enrichwiki, # you can replace the numbers to the row number of pathway of your interest
+       aes(x = Cell_type, y = Description)) +
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  #theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=30)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
+  ylab(NULL)+
+  xlab(NULL)+
+  coord_fixed(ratio = 1)+
+  #theme_black()+
+  theme_bw()+
+  theme(text = element_text(size=30)) +
+  #theme(axis.text.x = element_text(angle = 45))+
+  theme(axis.text.y = element_text(hjust = 1))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=10)) 
+
+#ggtitle("GO pathway enrichment")
+dev.off()
+
+
+
+
+
+pathway_GSEA<-function(res_gene=res,cname_select ,padj_cutoff=0.1,log2FoldChange_cutoff=0)
+{
+  
+  wp2gene <- read.gmt("13_sample_investigation_plots/wikipathways-20191210-gmt-Homo_sapiens.gmt")
+  print(cname_select)
+  
+  
+  aux <- res_gene %>% filter(Cell_type==cname_select)
+  
+  if(nrow(aux)>0)
+  {
+    gene<-genes <- filter(aux,padj<padj_cutoff,abs(log2FoldChange)>log2FoldChange_cutoff) %>% dplyr::select(ENTREZID) %>% unlist
+    geneUniv <- aux %>% dplyr::select(ENTREZID) %>% unlist
+    ##geneList <- aux$log2FoldChange
+    geneList <- -log10(aux$pvalue)
+    names(geneList) <- aux$ENTREZID
+    geneList = sort(geneList, decreasing = TRUE)
+    #length(genes)
+    
+    print(length(gene))
+    
+    wp2gene <- wp2gene %>% tidyr::separate(term, c("name","version","wpid","org"), "%")
+    wpid2gene <- wp2gene %>% dplyr::select(wpid, gene) #TERM2GENE
+    wpid2name <- wp2gene %>% dplyr::select(wpid, name) #TERM2NAME
+    
+    
+    ewp <- GSEA(geneList, TERM2GENE = wpid2gene, TERM2NAME = wpid2name, verbose=FALSE,pvalueCutoff = 1 )#,minGSSize=5, maxGSSize=3000,eps =0,pvalueCutoff = 1)
+    
+    if (!is.null(ewp))
+    {
+      res_en<-ewp@result
+      res_en<-res_en%>%filter(p.adjust<0.1)
+      dim1<-nrow(res_en)
+      #print(dim1)
+      if(min(dim1,10)>0)
+      {
+        
+        
+        res_en<-res_en[1:min(dim1,10),c("ID","Description" ,"enrichmentScore","p.adjust")]
+        res_en$Cell_type<-rep(cname_select,min(dim1,10))
+      }
+      return (res_en)
+    }
+    
+  }
+  
+}
+
+res_gseawikilist<-lapply(unique(res$Cell_type), function(x) {pathway_GSEA(cname_select=x)})  
+res_df_gseawiki <- do.call(rbind,res_gseawikilist)
+
+
+pdf(paste0(outFolder,"gse_wikipathways_cname_DotPlot.pdf"),width=7,height=5)
+ggplot(res_df_gseawiki, 
+       aes(x = Cell_type, y = Description)) + 
+  geom_point(aes(size = enrichmentScore, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=30)) +
+  labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term" #enrichmentScore
+  ylab(NULL)+ 
+  #theme_black()+
+  theme_bw()+
+  #theme(text = element_text(size=30)) +
+  theme(axis.text.x = element_text(angle = 45))+
+  #xlab(NULL) +
+  theme(axis.text.y = element_text(hjust = 1))+
+  theme(text = element_text(size=30)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=10)) 
+
+#+
+#theme_black()
+#coord_fixed(ratio = .8)
+#ggtitle("GO pathway enrichment")
+dev.off()
+
+
+
+
+pathway_enrich_go<-function(res_gene=res,cname_select ,padj_cutoff=0.1,log2FoldChange_cutoff=0)
+{
+  
+  print(cname_select)
+  print(cname_select)
+  
+  aux <- res_gene %>% filter(Cell_type==cname_select)
+  
+  if(nrow(aux)>0)
+  {
+    gene<-genes <- filter(aux,padj<padj_cutoff,abs(log2FoldChange)>log2FoldChange_cutoff) %>% dplyr::select(ENTREZID) %>% unlist
+    genes<-gene<-as.character(genes)
+    geneUniv <- as.character(aux %>% dplyr::select(ENTREZID) %>% unlist)
+    ##geneList <- aux$log2FoldChange
+    geneList <- -log10(aux$pvalue)
+     print(length(gene))
+    
+    if (length(gene)>0)
+    {
+          message(".................................")
+      message("enrichGO")
+      ego <- enrichGO(gene=genes,universe=geneUniv, OrgDb=org.Hs.eg.db,ont="BP")
+      print(head(ego))
+      
+      
+      
+      
+      if (!is.null(ego) & nrow(ego@result)>0 )
+      {
+        res_en<-ego@result
+        res_en<-res_en%>%filter(p.adjust<0.1)
+        dim1<-nrow(res_en)
+        #print(dim1)
+        if(min(dim1,10)>0)
+        {
+          
+          
+          res_en<-res_en[1:min(dim1,10),c("ID","Description" ,"GeneRatio","p.adjust")]
+          res_en$Cell_type<-rep(cname_select,min(dim1,10))
+        }
+        return (res_en)
+      }
+      
+    }
+    
+  }
+  
+}
+
+res_enrichgo<-lapply(unique(res$Cell_type), function(x) {pathway_enrich_go(cname_select=x)})  
+res_df_goi <- do.call(rbind,res_enrichgo)
+
+res_df_goi$GeneRatio<-sapply(res_df_goi$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+pdf(paste0(outFolder,"enrichGO_cname_DotPlot.pdf"),width=8,height=10)
+ggplot(res_df_goi, 
+       aes(x = Cell_type, y = Description)) + 
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term" #GeneRatio
+  ylab(NULL)+ 
+  #theme_black()+
+  theme_bw()+
+  theme(text = element_text(size=30)) +
+  theme(axis.text.x = element_text(angle = 45))+
+  #xlab(NULL) +
+  #theme(text = element_text(size=30)) +
+  theme(axis.text.y = element_text(hjust = 1))+
+  theme(text = element_text(size=30)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=10)) 
+
+dev.off()
+
+
+
+pathway_enrich_kegg<-function(res_gene=res,cname_select ,padj_cutoff=0.1,log2FoldChange_cutoff=0)
+{
+  
+  print(cname_select)
+  print(cname_select)
+  
+  aux <- res_gene %>% filter(Cell_type==cname_select)
+  
+  if(nrow(aux)>0)
+  {
+    gene<-genes <- filter(aux,padj<padj_cutoff,abs(log2FoldChange)>log2FoldChange_cutoff) %>% dplyr::select(ENTREZID) %>% unlist
+    genes<-gene<-as.character(genes)
+    geneUniv <- as.character(aux %>% dplyr::select(ENTREZID) %>% unlist)
+    ##geneList <- aux$log2FoldChange
+    geneList <- -log10(aux$pvalue)
+    print(length(gene))
+    
+    if (length(gene)>0)
+    {
+      message(".................................")
+      message("enrichGO")
+      ego <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa")
+      print(head(ego))
+      
+      
+      
+      
+      if (!is.null(ego) & nrow(ego@result)>0 )
+      {
+        res_en<-ego@result
+        res_en<-res_en%>%filter(p.adjust<0.1)
+        dim1<-nrow(res_en)
+        #print(dim1)
+        if(min(dim1,20)>0)
+        {
+          
+          
+          res_en<-res_en[1:min(dim1,20),c("ID","Description" ,"GeneRatio","p.adjust")]
+          res_en$Cell_type<-rep(cname_select,min(dim1,20))
+          return (res_en)
+        }
+        
+      }
+      
+    }
+    
+  }
+  
+}
+
+res_enrichkegg<-lapply(unique(res$Cell_type), function(x) {pathway_enrich_kegg(cname_select=x)})  
+res_df_kegg <- do.call(rbind,res_enrichkegg)
+
+res_df_kegg$GeneRatio<-sapply(res_df_kegg$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+pdf(paste0(outFolder,"enrichKEGG_cname_DotPlot.pdf"),width=8,height=10)
+ggplot(res_df_kegg, 
+       aes(x = Cell_type, y = Description)) + 
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term" #GeneRatio
+  ylab(NULL)+ 
+  #theme_black()+
+  theme_bw()+
+  theme(text = element_text(size=30)) +
+  theme(axis.text.x = element_text(angle = 45))+
+  #xlab(NULL) +
+  theme(text = element_text(size=30)) +
+  theme(axis.text.y = element_text(hjust = 1))+
+  theme(text = element_text(size=30)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=10)) 
+
+dev.off()
+
+
+
+pathway_enrich_reactome<-function(res_gene=res,cname_select ,padj_cutoff=0.1,log2FoldChange_cutoff=0)
+{
+  
+  print(cname_select)
+  print(cname_select)
+  
+  aux <- res_gene %>% filter(Cell_type==cname_select)
+  
+  if(nrow(aux)>0)
+  {
+    gene<-genes <- filter(aux,padj<padj_cutoff,abs(log2FoldChange)>log2FoldChange_cutoff) %>% dplyr::select(ENTREZID) %>% unlist
+    genes<-gene<-as.character(genes)
+    geneUniv <- as.character(aux %>% dplyr::select(ENTREZID) %>% unlist)
+    ##geneList <- aux$log2FoldChange
+    geneList <- -log10(aux$pvalue)
+    print(length(gene))
+    
+    if (length(gene)>0)
+    {
+      message(".................................")
+      
+      
+      message("enrichReactome")
+      erpath <- enrichPathway(gene=genes,universe=geneUniv)
+      
+      print(head(erpath))
+      
+      
+      
+      
+      if (!is.null(erpath) & nrow(erpath@result)>0 )
+      {
+        res_en<-erpath@result
+        res_en<-res_en%>%filter(p.adjust<0.1)
+        dim1<-nrow(res_en)
+        #print(dim1)
+        if(min(dim1,20)>0)
+        {
+          
+          
+          res_en<-res_en[1:min(dim1,20),c("ID","Description" ,"GeneRatio","p.adjust")]
+          res_en$Cell_type<-rep(cname_select,min(dim1,20))
+          return (res_en)
+        }
+        
+      }
+      
+    }
+    
+  }
+  
+}
+
+res_enrichreacome<-lapply(unique(res$Cell_type), function(x) {pathway_enrich_reactome(cname_select=x)})  
+res_df_reacome <- do.call(rbind,res_enrichreacome)
+
+res_df_reacome$GeneRatio<-sapply(res_df_reacome$GeneRatio, function(x){
+  numden<-unlist(strsplit(x,"/"))
+  return (as.numeric(numden[1])/as.numeric(numden[2]))
+})
+
+
+pdf(paste0(outFolder,"enrichReactome_cname_DotPlot.pdf"),width=15,height=18)
+ggplot(res_df_reacome, 
+       aes(x = Cell_type, y = Description)) + 
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term" #GeneRatio
+  ylab(NULL)+ 
+  #theme_black()+
+  theme_bw()+
+  #theme(text = element_text(size=20)) +
+  theme(text = element_text(size=20)) +
+  theme(axis.text.x = element_text(angle = 45))+
+  #xlab(NULL) +
+  theme(axis.text.y = element_text(hjust = 1))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+dev.off()
+
+
+
+pathway_GSEA_go<-function(res_gene=res,cname_select ,padj_cutoff=0.1,log2FoldChange_cutoff=0)
+{
+  
+   print(cname_select)
+  
+  
+  aux <- res_gene %>% filter(Cell_type==cname_select)
+  
+  if(nrow(aux)>0)
+  {
+    gene<-genes <- filter(aux,padj<padj_cutoff,abs(log2FoldChange)>log2FoldChange_cutoff) %>% dplyr::select(ENTREZID) %>% unlist
+    geneUniv <- aux %>% dplyr::select(ENTREZID) %>% unlist
+    ##geneList <- aux$log2FoldChange
+    geneList <- -log10(aux$pvalue)
+    names(geneList) <- aux$ENTREZID
+    geneList = sort(geneList, decreasing = TRUE)
+    #length(genes)
+    
+    print(length(gene))
+    
+     
+      
+    gseGO.res <- gseGO(geneList,  OrgDb=org.Hs.eg.db,ont="BP")
+    
+    
+    if (!is.null(gseGO.res))
+    {
+      res_en<-gseGO.res@result
+      res_en<-res_en%>%filter(p.adjust<0.1)
+      dim1<-nrow(res_en)
+      #print(dim1)
+      if(min(dim1,10)>0)
+      {
+        
+        
+        res_en<-res_en[1:min(dim1,10),c("ID","Description" ,"enrichmentScore","p.adjust")]
+        res_en$Cell_type<-rep(cname_select,min(dim1,10))
+        return (res_en)
+      }
+      
+    }
+    
+  }
+  
+}
+
+res_gseago<-lapply(unique(res$Cell_type), function(x) {pathway_GSEA_go(cname_select=x)})  
+res_df_gsego <- do.call(rbind,res_gseago)
+
+
+pdf(paste0(outFolder,"gse_go_cname_DotPlot.pdf"),width=10,height=10)
+ggplot(res_df_gsego, 
+       aes(x = Cell_type, y = Description)) + 
+  geom_point(aes(size = enrichmentScore, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term" #enrichmentScore
+  ylab(NULL)+ 
+  #theme_black()+
+  theme_bw()+
+  theme(text = element_text(size=30)) +
+  theme(axis.text.x = element_text(angle = 45))+
+  #xlab(NULL) +
+  theme(text = element_text(size=30)) +
+  theme(axis.text.y = element_text(hjust = 1))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=10)) 
+
+#+
+#theme_black()
+#coord_fixed(ratio = .8)
+#ggtitle("GO pathway enrichment")
+dev.off()
+
+
+
+
+
+pathway_GSEA_kegg<-function(res_gene=res,cname_select ,padj_cutoff=0.1,log2FoldChange_cutoff=0)
+{
+  
+  print(cname_select)
+  
+  
+  aux <- res_gene %>% filter(Cell_type==cname_select)
+  
+  if(nrow(aux)>0)
+  {
+    gene<-genes <- filter(aux,padj<padj_cutoff,abs(log2FoldChange)>log2FoldChange_cutoff) %>% dplyr::select(ENTREZID) %>% unlist
+    geneUniv <- aux %>% dplyr::select(ENTREZID) %>% unlist
+    ##geneList <- aux$log2FoldChange
+    geneList <- -log10(aux$pvalue)
+    names(geneList) <- aux$ENTREZID
+    geneList = sort(geneList, decreasing = TRUE)
+    #length(genes)
+    
+    print(length(gene))
+    
+    
+    
+    gsekegg.res <- gseKEGG(geneList,  organism = "hsa")
+    
+    
+    if (!is.null(gsekegg.res))
+    {
+      res_en<-gsekegg.res@result
+      res_en<-res_en%>%filter(p.adjust<0.1)
+      dim1<-nrow(res_en)
+      #print(dim1)
+      if(min(dim1,10)>0)
+      {
+        
+        
+        res_en<-res_en[1:min(dim1,10),c("ID","Description" ,"enrichmentScore","p.adjust")]
+        res_en$Cell_type<-rep(cname_select,min(dim1,10))
+        return (res_en)
+      }
+      
+    }
+    
+  }
+  
+}
+
+res_gseakegg<-lapply(unique(res$Cell_type), function(x) {pathway_GSEA_kegg(cname_select=x)})  
+res_df_gsekegg <- do.call(rbind,res_gseakegg)
+
+
+pdf(paste0(outFolder,"gse_kegg_cname_DotPlot.pdf"),width=3,height=2)
+ggplot(res_df_gsekegg, 
+       aes(x = Cell_type, y = Description)) + 
+  geom_point(aes(size = enrichmentScore, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term" #enrichmentScore
+  ylab(NULL)+ 
+  #theme_black()+
+  theme_bw()+
+  theme(text = element_text(size=30)) +
+  #theme(text = element_text(size=30)) +
+  theme(axis.text.x = element_text(angle = 45))+
+  #xlab(NULL) +
+  theme(axis.text.y = element_text(hjust = 1))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=10)) 
+
+#+
+#theme_black()
+#coord_fixed(ratio = .8)
+#ggtitle("GO pathway enrichment")
+dev.off()
+
+
+
+
+pathway_GSEA_reactome<-function(res_gene=res,cname_select ,padj_cutoff=0.1,log2FoldChange_cutoff=0)
+{
+  
+  print(cname_select)
+  
+  
+  aux <- res_gene %>% filter(Cell_type==cname_select)
+  
+  if(nrow(aux)>0)
+  {
+    gene<-genes <- filter(aux,padj<padj_cutoff,abs(log2FoldChange)>log2FoldChange_cutoff) %>% dplyr::select(ENTREZID) %>% unlist
+    geneUniv <- aux %>% dplyr::select(ENTREZID) %>% unlist
+    ##geneList <- aux$log2FoldChange
+    geneList <- -log10(aux$pvalue)
+    names(geneList) <- aux$ENTREZID
+    geneList = sort(geneList, decreasing = TRUE)
+    #length(genes)
+    
+    print(length(gene))
+    
+    
+    
+    gsereacome.res <- gsePathway(geneList)
+    
+    
+    if (!is.null(gsereacome.res))
+    {
+      res_en<-gsereacome.res@result
+      res_en<-res_en%>%filter(p.adjust<0.1)
+      dim1<-nrow(res_en)
+      #print(dim1)
+      if(min(dim1,10)>0)
+      {
+        
+        
+        res_en<-res_en[1:min(dim1,10),c("ID","Description" ,"enrichmentScore","p.adjust")]
+        res_en$Cell_type<-rep(cname_select,min(dim1,10))
+        return (res_en)
+      }
+      
+    }
+    
+  }
+  
+}
+
+res_gseareacome<-lapply(unique(res$Cell_type), function(x) {pathway_GSEA_reactome(cname_select=x)})  
+res_df_gsereacome <- do.call(rbind,res_gseareacome)
+
+
+pdf(paste0(outFolder,"gse_reactome_cname_DotPlot.pdf"),width=7,height=10)
+ggplot(res_df_gsereacome, 
+       aes(x = Cell_type, y = Description)) + 
+  geom_point(aes(size = enrichmentScore, color = p.adjust)) +
+  theme_bw(base_size = 14) +
+  #scale_colour_gradient(limits=c(0, 0.10), low="red") +
+  scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
+  theme(axis.text.x = element_text(angle = 45,hjust=1)) +
+  labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term" #enrichmentScore
+  ylab(NULL)+ 
+  #theme_black()+
+  theme_bw()+
+  theme(text = element_text(size=30)) +
+  #theme(text = element_text(size=30)) +
+  theme(axis.text.x = element_text(angle = 45))+
+  #xlab(NULL) +
+  theme(axis.text.y = element_text(hjust = 1))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=10)) 
+
+#+
+#theme_black()
+#coord_fixed(ratio = .8)
+#ggtitle("GO pathway enrichment")
+dev.off()
+
+
+######################################################################################
+outFolder<-"14_deconvolution_analysis/merge_subcelltypes/"
+proportion<-read.delim("14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_output/CIBERSORTxGEP_Job17_Fractions.txt")
+cl<-proportion[,1]
+proportion<-proportion[,c(-1,-18,-19,-20)]
+proportion<-t(proportion)
+colnames(proportion)<-unlist(strsplit(cl,"_"))[seq(2,2*length(cl),by=2)]
+
+pvalues_celltypes<-sapply(rownames(proportion), function(x){
+  pvalue=t.test(proportion[x,colnames(proportion)=="TL"],proportion[x,colnames(proportion)=="TNL"])$p.value
+  pvalue
+})
+
+pvalues_celltypes<-cbind(pvalues_celltypes,p.adjust(pvalues_celltypes,"fdr"))
+colnames(pvalues_celltypes)<-c("pvalue","pvalue.fdr")
+
+write.csv(pvalues_celltypes,paste0(outFolder,"proportion_pvalues_Job17_output.csv"))
+
+
+
+
+
+

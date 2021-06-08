@@ -447,16 +447,24 @@ barplot_data<-sapply(unique(res$Cell_type),function(x){
 
 rw<-c("both","single_cell")
 barplot_data<-barplot_data[-3,]
+
+
+#barplot_data<-barplot_data[,-1]
+
 clust2Name<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
 clust2Name<-paste0(c(0:23),"_",clust2Name)
 names(clust2Name)<-c(0:23)
+
 cl<-clust2Name[colnames(barplot_data)]
 barplot_data<-t(barplot_data)
 colnames(barplot_data)<-rw
 rownames(barplot_data)<-cl
 barplot_data<-barplot_data[order(barplot_data[,"single_cell"]),]
 
-#barplot_data<-barplot_data[-1,]
+
+barplot_data<-barplot_data[which(rownames(barplot_data)!="11_NK-cell"),]
+
+
 
 cl<-rownames(barplot_data)
 rownames(barplot_data)<-NULL
@@ -476,7 +484,7 @@ dev.off()
 
 ###########
 
-rw<-c("both","single_cell","bulk")
+rw<-c("both","single_cell")   #,"bulk")
 #barplot_data<-barplot_data[-3,]
 clust2Name<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
 clust2Name<-paste0(c(0:23),"_",clust2Name)
@@ -493,7 +501,7 @@ par(mar=c(4, 14 ,4.1 ,2.1))
 outFolder<-"./8_outputs_DESeq_Plots/"
 
 fname=paste0(outFolder,"comparison_with_bulk.pdf");
-pdf(fname,width=3,height=4)
+pdf(fname,width=10,height=6)
 rownames(barplot_data)<-NULL
 
 
