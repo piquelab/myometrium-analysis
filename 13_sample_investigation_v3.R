@@ -199,7 +199,7 @@ names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-
 ##outFolder="13_sample_investigation_plots/"
 
 res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
-res<-res %>% filter(padj<0.1,abs(log2FoldChange)>0)
+#res<-res %>% filter(padj<0.1,abs(log2FoldChange)>0)
 
 # Adding location, cell type, and origin columns 
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
@@ -226,12 +226,11 @@ res$Cell_type<-clust2Names[res$Cell_type]
 #res_genes<-res[res$gene_name %in% c("CALM1","PPP1R16A","PRKG1", "PDE5A",  "PLN", "GUCY1A1", "GUCY1B1", "LMOD1", "JUN","IGFBP5"),]
 
 
-outFolder<-"./14_deconvolution_analysis/merge_subcelltypes/"
 
 #genes_Myometrialpathway
-load(paste0(outFolder,"genes_Myometrialpathway_decov_all_singlecell_SMC1_ORAwiki_myogenes.RData"))
+load(paste0("14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/genes_Myometrialpathway_decov_all_singlecell_SMC1_ORAwiki_myogenes.RData"))
 
-outFolder<-paste0(outFolder,"CIBERSORTx_Job17_deseq_DEGs/")
+outFolder<-"14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/"
 
 
 
