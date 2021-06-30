@@ -1,12 +1,15 @@
-#
+
+#############################################################
+# Downstream analysis of the demuxlet output
+#############################################################
+
+
 library(tidyverse)
 library(parallel)
-##library(data.table)
 
-### 
 outFolder="./1_demux2_output/"
 
-#opfn <- "./1_demux2_output/1_demux_New.SNG.rds" 
+#opfn <- "./1_demux2_output/1_demux_New.SNG.rds"
 opfn <- "./1_demux2_output/1_demux_New.SNG_7only.rds" 
 demux <- read_rds(opfn)
 
@@ -18,8 +21,8 @@ aa <- demux %>% dplyr::filter(NUM.READS>10,NUM.SNPS>10,NUM.READS<20000) %>%
 
 
 ##SNG.BEST.GUESS
-##
-#cc <- read_tsv("ParturitionAndMyoSamples_old.txt") 
+
+# sample information 
 cc <- read.csv("ParturitionAndMyoSamples.csv",stringsAsFactors = FALSE) 
 #%>%mutate(Sample_ID=paste(Pregnancy_ID,Origin,sep="-"))
 head(cc)

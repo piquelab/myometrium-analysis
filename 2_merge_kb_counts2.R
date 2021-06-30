@@ -4,20 +4,23 @@ library(tidyverse)
 library(diem)
 
 
+#############################################################
+# Downstream analysis of the kallisto output
+#############################################################
+
+
 rm(list=ls())
 outdir <- "./2_kb_Output/"
 system("mkdir -p 2_kb_Output/")
 
 
 ################################################
-#parturition
 # generate folders containing h5ad data produced by kallisto 
 ################################################
 basefolder <- "/wsu/home/groups/prbgenomics/labor_myo/kallisto/bus/"
 expNames <- dir(basefolder,"^Labor*")
 
 expNames
-
 
 subfolder <- ""
 folders <- paste0(basefolder,expNames,subfolder)
@@ -66,7 +69,7 @@ readKallisto  <- function (run, prefixFile="spliced/s",expPrefix=NULL)
   feature.names <- readLines(gene.loc)
   colnames(data) <- feature.names
   
-  # The matrix read has cells in rows
+  # The matrix read has cells as rows
   t(data)
 }
 
@@ -103,41 +106,8 @@ adata <- sapply(expNames,function(ii){
   sce
 })
 
-
-# adata <- sapply(expNames,function(ii){
-#   ##
-#   expPrefix = ii;
-#   cat("#Loading ",paste0(folders[ii], "/counts_unfiltered/spliced"), " ...")
-#   sFull <- readKallisto(folders[ii], prefixFile="/counts_unfiltered/spliced" , expPrefix)  #"/spliced/s"
-#   cat(dim(sFull),"\n")
-#   # cat("#Loading ",paste0(folders[ii], "/counts_unfiltered/unspliced"), " ...")
-#   # uFull <- readKallisto(folders[ii], prefixFile="/counts_unfiltered/unspliced", expPrefix) #"/unspliced/u"
-#   # cat(dim(uFull),"\n")
-#   ##
-#   scs <- colSums(sFull)
-#   #rownames(sFull) <- paste0("S-",rownames(sFull))
-#   # ucs <- colSums(uFull)
-#   # rownames(uFull) <- paste0("U-",rownames(uFull))
-#   #
-#   #sel <- intersect(colnames(sFull),colnames(uFull))
-#   sel <- colnames(sFull)[scs>0]
-#   count0 <- sFull[,sel]
-# 
-#   ## May need to rename rownames or split...
-#   sce <- CreateSeuratObject(count0)
-#   #sce <- create_SCE(count0)
-#   cat(dim(sce),"\n")
-#   ## Remove debris...
-#   #sce <- diem(sce,top_n = 16000)
-#   #sc <- convert_to_seurat(sce)
-# 
-#   cat(dim(sce),"\n")
-# 
-#   sce
-# })
-
 write_rds(adata,paste0(outdir,"adata.rds"))
-sc <- merge(adata[[1]],adata[-1], project="kbParturition")
+sc <- merge(adata[[1]],adata[-1], project="kbMyometrium")
 write_rds(sc,paste0(outdir,"kb_Seurat.obj.rds"))
 
 

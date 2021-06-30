@@ -1,17 +1,12 @@
-## options(repos = c(CRAN = "http://cran.rstudio.com"))
-##   This uses updated Seurat package 3 - starts with merged counts/demux from step 2
 
 library(Seurat)
 library(Matrix)
 library(tidyverse)
 rm(list = ls())
-###########################################
-## Testing sc transform           
-## 2and3_Diem_Output
-## adata <- read_rds("./kb_diem_Output/kb_diem_Seurat.list.rds")
 
-#sc <- read_rds("./2_kb_diem_Output/kb_diem_Seurat.obj.rds")
-#sc <- read_rds("/nfs/rprdata/scilab/labor2/covid-analysis/2020-10-02/2_kb_diem_Output/kb_diem_Seurat.obj.rds")
+#############################################################
+# Filtering based on percent.mt, nFeature_RNA
+#############################################################
 
 sc<- read_rds("/wsu/home/groups/prbgenomics/labor_myo/myometrium_analysis/2_kb_Output/kb_Seurat.obj.rds")
 sc@meta.data$Library <- (gsub("_[ACGT]{6,}","",colnames(sc)))
@@ -29,7 +24,6 @@ system(paste0("mkdir -p ",outFolder))
 future::plan(strategy = 'multicore', workers = 20)
 options(future.globals.maxSize = 20 * 1024 ^ 3)
 
-## Library locations need to do this differently.... 
 
 
 
@@ -68,52 +62,22 @@ md = md %>% rownames_to_column("barcode") %>% left_join(dd) %>%
 md$bc <- rownames(md)
 
 
-
-
-
-## Todo: merge with other tables with covariates.
+# sample information
 cc <- read.csv("/wsu/home/groups/prbgenomics/labor_myo/myometrium_analysis/ParturitionAndMyoSamples.csv",stringsAsFactors = FALSE)%>% mutate(SNG.BEST.GUESS=Sample_ID)
 head(cc)
 # # 
 
 #cc <- read_tsv("/nfs/rprdata/scilab/labor2/Covid19.Samples.txt") %>%  mutate(SNG.BEST.GUESS=paste(Pregnancy_ID,Origin,sep="-"))
 
+# joint with meta data
 md <- md %>% left_join(cc) 
 head(md)
 
-#Libraries?
-#/nfs/rprdata/scilab/labor2/Covid19.Libraries.txt
-# cc <- read_tsv(".txt")
-# head(cc)
-# 
-# okbatches <- paste0("HPL",cc$HPL_ID,"_",cc$Library_ID)
-# md$okbatch <- paste0(md$Pregnancy_ID,"_",md$EXP) %in% okbatches
-# mean(md$okbatch)
 
-# md2 <- md
-# 
-# md <- md2
-# 
-# md <- filter(md,okbatch)
-# mean(md$okbatch)
-
-
-## Todo: Filter cells in the right batch.
-
-# table(md$status,md$DROPLET.TYPE)
-#
-# table(md$assig2==md$SNG.BEST.GUESS)
-#
-# table(md$Library,is.na(md$SNG.BEST.GUESS))
-#
-# table(md$Library,md$SNG.BEST.GUESS)
-
-
-#sc <- sc[,md$bc]
 
 sc@meta.data <- md  %>% column_to_rownames("bc")
 
-## Annotate genes with annotables or other and filtering chrM?
+## Annotate genes with annotables or other and filtering chrM
 cmd <- paste0("zcat ",
               "/wsu/home/groups/piquelab/data/gencode/Gencode_human/release_31/gencode.v31.annotation.gff3.gz",
               " | awk '$3~/gene/'",
@@ -182,8 +146,6 @@ sc <- subset(sc, subset = nFeature_RNA > 100 & nFeature_RNA < 10000 & DIFF.LLK.B
 
 table(sc@meta.data$Library, sc@meta.data$SNG.BEST.GUESS) 
 
-
-##sc[["RNA"]][[]] <- anno %>% column_to_rownames("kbid")
 
 ## Save merged object after filter.
 fname=paste0(outFolder,"scFilteredSeurat.Rdata")
