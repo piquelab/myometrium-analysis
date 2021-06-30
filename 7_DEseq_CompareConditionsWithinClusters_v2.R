@@ -1,6 +1,4 @@
-
 library(tidyverse)
-##library(knitr)
 library(DESeq2)
 ##library(annotables)
 library(qqman)
