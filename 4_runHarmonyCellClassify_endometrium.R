@@ -1,17 +1,15 @@
-## options(repos = c(CRAN = "http://cran.rstudio.com"))
-##   This uses updated Seurat package 3 - starts with merged counts/demux from step 2
+#############################################################
+### cell type classification using SingleR 
+### reference: W. Wang, F. Vilella, P. Alama, I. Moreno, M. Mignardi, A. Isakova, W. Pan, C. Simon, S. R. Quake, Single-cell transcriptomic atlas of the human endometrium during the menstrual cycle. Nat Med 26, 1644-1653 (2020).
+
+#############################################################
 
 library(Seurat)
 library(Matrix)
 library(tidyverse)
-
 library(future)
-
 library(harmony)
-
-#################
 library(SingleR)
-
 
 
 future::plan(strategy = 'multicore', workers = 16)
@@ -19,47 +17,28 @@ options(future.globals.maxSize = 30 * 1024 ^ 3)
 
 
 ###########################################
-#reference: endometrium 
-#/nfs/rprdata/scilab/endometrium/otherdata/GSE111976/gs10x/Analysis
-
-
-
 outFolder="./4_harmony_cellClass_endometrium/"
 system(paste0("mkdir -p ", outFolder))
-##setwd(outFolder)
 
-
-
-#sc,anno
+#reference: sc,anno
 load("/nfs/rprdata/scilab/endometrium/otherdata/GSE111976/gs10x/Analysis/4_harmony_cellClass/scFullSeurat.Rdata")
 sc2<-sc
 sc2 <- subset(sc2, subset = nFeature_RNA > 200)
 
-#query sc 
-load("3_MergeDemux_Output/scFilteredSeurat.Rdata")
 
+
+#query: sc 
+load("3_MergeDemux_Output/scFilteredSeurat.Rdata")
+sc1 <- sc
 
 ### Merge
 # to identify the cell types of sc1, another study with known celltypes will be merged to this study and the cell types will be identified
-
-#sc<-read_rds("4_harmony/sc.NormByLocationRep.Harmony.rds")
-
-sc1 <- sc
-
-##sc <- merge(sc1,list(sc2,sc3,sc4))
-
 sc <- merge(sc1,list(sc2))
 
 
 dim(sc)
 
 table(sc$Library)
-
-## table(sc$Location)
-
-##table(sc$sclabor.tlabel)
-
-##table(sc$Location,sc$sclabor.tlabel)
 
 ## Harmony
 
@@ -73,7 +52,6 @@ sc <- ScaleData(sc, verbose = TRUE)
 
 sc <- RunPCA(sc,pc.genes = sc@var.genes, npcs = 100, verbose = TRUE)
 
-##sc <- RunHarmony(sc,c("Location","percent.mt","Rep"),reduction="pca")
 sc <- RunHarmony(sc,c("Library"),reduction="pca")
 
 sc <- RunUMAP(sc,reduction = "harmony", dims = 1:30)
@@ -84,9 +62,6 @@ sc <- RunUMAP(sc,reduction = "harmony", dims = 1:30)
 sc <- FindNeighbors(sc, reduction = "harmony", dims = 1:30, verbose = TRUE)
 
 sc <- FindClusters(sc, verbose = TRUE,resolution=0.8)
-#sc <- FindClusters(sc, verbose = TRUE,resolution=0.6)
-
-
 
 ################
 
@@ -100,7 +75,7 @@ query.he <- he[,is.na(sc@meta.data$cell_type)]
 #ref.he <- he[,!is.na(sc@meta.data$FinalName)]
 ref.he <- he[,!is.na(sc@meta.data$cell_type)]
 
-#ref.labels <- sc@meta.data$FinalName[!is.na(sc@meta.data$FinalName)]
+
 ref.labels <- sc@meta.data$cell_type[!is.na(sc@meta.data$cell_type)]
 
 pred.labels <- SingleR(test = query.he, ref = ref.he, labels = ref.labels)
@@ -110,11 +85,6 @@ pred.labels <- SingleR(test = query.he, ref = ref.he, labels = ref.labels)
 table(pred.labels$pruned.labels)
 
 sum(is.na(pred.labels$pruned.labels))
-
-#105
-##sum(is.na(pred.labels$labels))
-
-##md <- sc@meta.data %>% select(scLaborLabs=pruned.labels)
 
 
 fname=paste0(outFolder,"sc.NormByLocation.ref.Harmony.singler.rds")
@@ -130,19 +100,7 @@ fname=paste0(outFolder,"sc.NormByLocation.ref.Harmony.singler.csv")
 write_csv(md,fname)
 
 
+## save object
 fname=paste0(outFolder,"sc.NormByLibFullIntegrated.refendometrium.Harmony.res0.8.rds")
 write_rds(sc,fname)
-
-## save object.
-
-#sc<-read_rds("/4_harmony_cellClass/sc.NormIntegrated.ref.Harmony.rds")
-
-# fname=paste0(outFolder,"sc.NormIntegrated.ref.Harmony.rds")
-# write_rds(sc,fname)
-
-
-
-
-### END- HERE ###
-########################################################
 
