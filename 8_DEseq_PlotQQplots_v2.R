@@ -1,7 +1,5 @@
 library(tidyverse)
-##library(knitr)
 library(DESeq2)
-##library(annotables)
 library(qqman)
 library(org.Hs.eg.db)
 library(clusterProfiler)
@@ -14,27 +12,24 @@ system(paste0("mkdir -p ",outFolder))
 
 ########################################################
 # load single cell data 
+
 ########################################################
 res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
 
 ## cluster colors 
 
-clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte",
-               "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast",
-               "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte", "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
 
 names(clust2Names)<-as.character(c(0:23))
-cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D",
-                  "#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","2C3E18","#745B48",
-                  "#AA5485","#4E747A","#C59A89","#C9C76F")   
-names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte",
-                         "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast",
-                         "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D","#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","2C3E18","#745B48","#AA5485","#4E747A","#C59A89","#C9C76F")   
+names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte", "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast", "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
 
-#write.csv(cluster.Colors,file="cluster.Colors2.csv")
 
+# cluster labels
 res$Cell_type<-clust2Names[res$Cell_type]
+
+
 
 #ENTREZID
 eg = bitr(res$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
@@ -71,28 +66,18 @@ res2 <- res %>% filter(!is.na(pvalue)) %>%
 load_ref_data<-function(outFolder="reference_Adi/",fl="CELLECTA.rds")
 {
     
-    if(fl=="TLvsTNL_blood_ENTREZ")
+    if(fl=="TLvsTNL_blood_ENTREZ" || fl=="TL-TNL_21vs28")
     {
-        ref_data <- read.csv("TLvsTNL_blood_ENTREZ.csv",stringsAsFactors = FALSE)
-        ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+        ref_data <- read.csv(paste0(fl,".csv"),stringsAsFactors = FALSE)
+        ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t)
         colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
         ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
         return(ref_data)
         
-    }
-    else
-    if (fl=="TL-TNL_21vs28")
+   
+    if (fl=="myometrium_term_TL-TNL_ALLList"|| fl=="PMID31921132")
     {
-        ref_data <- read.csv("TL-TNL_21vs28.csv",stringsAsFactors = FALSE)
-        ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
-        colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
-        ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
-        return(ref_data)
-        
-    }
-    if (fl=="myometrium_term_TL-TNL_ALLList")
-    {
-        ref_data <- read.delim("myometrium_term_TL-TNL_ALLList.txt")
+        ref_data <- read.delim(paste0(fl,".txt"))
         ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
         colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
         ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
@@ -110,15 +95,6 @@ load_ref_data<-function(outFolder="reference_Adi/",fl="CELLECTA.rds")
             return(ref_data)
         }
     
-    else if (fl=="PMID31921132")
-    {
-        ref_data<-read.delim("PMID31921132.txt")
-        ref_data<-ref_data %>% select(SYMBOL,FC,P.Value,adj.P.Val,ENTREZ,t )
-        colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
-        ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
-        ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
-        return (ref_data)
-    }
     else 
     {
         
@@ -133,6 +109,7 @@ load_ref_data<-function(outFolder="reference_Adi/",fl="CELLECTA.rds")
         return (ref_data)
     }
     
+    }
 }
 # reference data 
 
@@ -142,9 +119,6 @@ load_ref_data<-function(outFolder="reference_Adi/",fl="CELLECTA.rds")
 experiment<-"TLvsTNL_blood_ENTREZ"
 
 ref_data<-load_ref_data(fl=experiment) 
-
-#ref_data<-ref_data %>%   group_by(ENTREZID) %>%   sample_n(1)
-
 
 ref_data2 <- ref_data %>% filter(!is.na(Rpvalue)) %>%
     arrange(Rpvalue) %>%
@@ -245,8 +219,6 @@ ggsave(fname,p1,width=6,height=4.5)
 # ggsave(fname,p1,width=6,height=4.5)
 
 
-
-#based on gene entrezid
 de_gene_singlecell<-res2 %>% filter (padj<0.1) %>%  select(ENTREZID)
 de_gene_only_ref<-ref_data2 %>% filter (Rpadj < 0.1 & !ENTREZID %in% de_gene_singlecell$ENTREZID )
 res4<-res2 %>% filter(!ENTREZID %in% de_gene_only_ref$ENTREZID)
@@ -270,8 +242,6 @@ ggsave(fname,p1,width=6,height=4.5)
 ###################################################
 # Only Bulk
 ###################################################
-# not sure if this is correct 
-
 
 
 system(paste0("mkdir -p ",outFolder,experiment,"/"))
@@ -290,10 +260,8 @@ ggsave(fname1,p1,width=6,height=4.5)
 
 
 # multiple qqplots related to show enrichment at different cell types
-
 # preparing data to show the enrichment across multiple cell types
 
-# choose how to join datasets 
 
 colnames(ref_data)[which(colnames(ref_data)=="ENTREZID")]<-"R.ENTREZID"
 colnames(ref_data)[which(colnames(ref_data)=="R.gene_name")]<-"gene_name"
@@ -316,55 +284,6 @@ p2 <- res_join %>%
     theme_bw()
 ggsave(fname2,p2,width=6,height=4.5)
 
-
-# resDE<-res %>% filter(padj<0.1 )
-# colnames(ref_data2)[which(colnames(ref_data2)=="ENTREZID")]<-"R.ENTREZID"
-# colnames(ref_data2)[which(colnames(ref_data2)=="R.gene_name")]<-"gene_name"
-# res_join<-ref_data2 %>% inner_join(resDE)
-# 
-# fname2=paste0(outFolder,experiment,"/reference.enriched.celltypes.qqplot.png");
-# p2 <- res_join %>%
-#     ggplot(aes(x=-log10(Rpexp),y=-log10(Rpvalue),color=Cell_type)) +
-#     geom_point() +
-#     scale_color_manual(values=cluster.Colors) +
-#     guides(colour = guide_legend(override.aes = list(size=5),title="Cell Type")) +
-#     geom_abline(slope=1,intercept=0) +
-#     #facet_grid(Origin ~ Location) +
-#     xlab(expression(Expected -log[10](p))) +
-#     ylab(expression(Observed -log[10](p))) + 
-#     theme_bw()
-# ggsave(fname2,p2,width=6,height=4.5)
-
-
-# fname=paste0(outFolder,experiment,"/all.qqplot_bulk_only.png");
-# png(fname,width=800,height=800)
-# qq(ref_data2$Rpvalue)
-# 
-# ref_data2 %>% mutate()
-# qqplot(y=ref_data2$Rpvalue,x=ref_data2$pexp)
-# qqline(y=ref_data2$Rpvalue)   
-# 
-# for (k in unique(res2$Cell_type))
-# {
-#     resDE<-res2 %>% filter(Cell_type ==k & padj<0.1 )
-#     if(nrow(resDE)>0 )
-#     {
-#         
-#         ref_data3<-ref_data2 %>% filter(ENTREZID %in% unique(resDE$ENTREZID))
-#         print(k)
-#         print(length(which(ref_data2$ENTREZID %in% unique(resDE$ENTREZID))))
-#         if(nrow(ref_data3)>0)
-#         {
-#             #qq(ref_data3$Rpvalue, col=cluster.Colors[k], lwd = 1) 
-#             qqline(ref_data3$Rpvalue, col=cluster.Colors[k], lwd = 1)   
-#             points(ref_data3$pexp,ref_data3$Rpvalue, col=cluster.Colors[k], lwd = 1)   
-#         }
-#             
-#     }
-#     
-# }
-# 
-# dev.off()
 
 
 #based on gene entrezid
@@ -405,8 +324,6 @@ de_gene_only_ref<-ref_data %>% filter (Rpadj < 0.1 & !gene_name %in% de_gene_sin
 res3<-res2 %>% filter(gene_name %in% de_gene_only_ref$gene_name)
 
 
-
-
 ref_data<-load_adi(fl="CELLECTA.rds")
 outFolder<-"./8_outputs_DESeq_Plots/DriverMap/"
 de_gene_singlecell<-res2 %>% filter (padj<0.1) %>%  select(gene_name)
@@ -432,7 +349,6 @@ p1 <- res3 %>%
     xlab(expression(Expected -log[10](p))) +
     ylab(expression(Observed -log[10](p))) + 
     theme_bw()
-
 ggsave(fname,p1,width=6,height=4.5)
 
 

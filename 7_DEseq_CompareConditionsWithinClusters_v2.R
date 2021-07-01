@@ -1,11 +1,15 @@
+
+#############################################################
+###  Calculating differentially expressed genes
+### 
+#############################################################
+
+
 library(tidyverse)
 library(DESeq2)
-##library(annotables)
 library(qqman)
-
 library(Seurat)
 library(reshape)
-
 library("BiocParallel")
 register(MulticoreParam(12))
 
