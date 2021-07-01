@@ -2,27 +2,30 @@ library(UpSetR)
 library(tidyverse)
 library(ComplexHeatmap)
 library(mashr)
+
+###################################################
+### Multivariate Adaptive Shrinkage
+
+###################################################
+
+
 library(rmeta)
 library(ashr)
 library(mashr)
 library(pheatmap)
-
 
 outFolder <- paste0("12_downstream_analysis/")
 system(paste0("mkdir -p ",outFolder))
 
 
 res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
-#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
 res <- res %>% filter(!is.na(pvalue))
 clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
 clust2Names<-paste0(c(0:23),"_",clust2Names)
 names(clust2Names)<-c(0:23)
 
-cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D",
-                  "#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","#2C3E18","#745B48",
-                  "#AA5485","#4E747A","#C59A89","#C9C76F")   
+cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D", "#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","#2C3E18","#745B48", "#AA5485","#4E747A","#C59A89","#C9C76F")   
 names(cluster.Colors)<-clust2Names
 
 res$cluster_colors<-cluster.Colors[res$Cell_type]
@@ -51,7 +54,6 @@ for (i in 1:length(cell_types))
 res_df<-as.data.frame(res_df)
 mt = make_comb_mat(res_df)#, top_n_sets = 25)
 m2 <- mt[,comb_size(mt)>20]
-#fig0 <- UpSet(m2, set_order=colnames(res_df),comb_order=order(-comb_size(m2)), row_names_side="left",right_annotation=NULL)#sets.bar.color = cluster.Colors[colnames(res_df)]
 fig0 <- UpSet(m2, set_order=colnames(res_df),comb_order=order(comb_size(m2)))#sets.bar.color = cluster.Colors[colnames(res_df)]
 pdf(file=paste0(outFolder,"upsetplot_comb_size25.pdf"))#,width=45,height=20)# or other device
 fig0
@@ -77,13 +79,9 @@ clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocy
 clust2Names<-paste0(c(0:23),"_",clust2Names)
 names(clust2Names)<-c(0:23)
 
-cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D",
-                  "#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","2C3E18","#745B48",
-                  "#AA5485","#4E747A","#C59A89","#C9C76F")   
+cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D","#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","2C3E18","#745B48","#AA5485","#4E747A","#C59A89","#C9C76F")   
 names(cluster.Colors)<-clust2Names
-
 res$cluster_colors<-cluster.Colors[res$Cell_type]
-
 res$Cell_type<-clust2Names[res$Cell_type]
 
 
@@ -105,15 +103,36 @@ m.c<-read_rds(paste0(outFolder,"m.c.rds"))
 
 mytop<-rep(FALSE,length(rownames(lfsr_m.c)))
 names(mytop)<-rownames(lfsr_m.c)
-# sample_genes<-res$kbid[which(res$gene_name %in% c("TCIRG1","ADAM15","MAP1B","PNPLA2","PLEKHO1","IFI16","HTRA1","FAM129A","CD52","EFHD2","CD82","ACOT7","WDR1","RRP9","OXTR","COX2","CAM","Cx43","GJA1","PTGES2","SCD")) ]
+#sample_genes<-res$kbid[which(res$gene_name %in% c("TCIRG1","ADAM15","MAP1B","PNPLA2","PLEKHO1","IFI16","HTRA1","FAM129A","CD52","EFHD2","CD82","ACOT7","WDR1","RRP9","OXTR","COX2","CAM","Cx43","GJA1","PTGES2","SCD")) ]
 #sample_genes<-res$kbid[which(res$gene_name == "ACTA2")]
 #sample_genes<-res$kbid[which(res$gene_name %in% c("LMOD1" , "GUCY1A1",  "GUCY1B1" ))]
 sample_genes<-res$kbid[which(res$gene_name %in% c("COL8A1","CSRP2","DCBLD2","DENR","	MFSD1","NDRG4","SENCR","SMCN1","SPON1","UNC45A","YIPF5"))]
+# intersected_genes<-read.csv(paste0(outFolder2,"intersected_genes.csv"),stringsAsFactors = FALSE)
+# #sample_genes<-res$kbid[which(res$gene_name %in% c("OXTR","COX2","CAM","Cx43","GJA1","PTGES2")) ]
+# sample_genes<-res$kbid[which(res$gene_name %in% hub_scores$gene_name[1:50])]
+# sample_genes<-res$kbid[which(res$gene_name %in% c("TCIRG1","ADAM15","MAP1B","PNPLA2","PLEKHO1","IFI16","HTRA1","FAM129A","CD52","EFHD2","CD82","ACOT7","WDR1","RRP9","OXTR","COX2","CAM","Cx43","GJA1","PTGES2","SCD")) ]
+# sample_genes<-res$kbid[which(res$gene_name %in% c("MMP9","STOM","METTL9","MSR1","MCEMP1","TFDP1","TSTA3","GMPR","HK1","FOXO3","P2RX7","MYOF","ABCG1","OLR1")) ]
+# sample_genes<-res$kbid[which(res$gene_name %in% unique(intersected_genes$gene_name)) ]
+# sample_genes<-res$kbid[which(res$gene_name %in% c("PRKG1", "PDE5A","PLN")) ]
+# which(res_select$gene_name %in% c("COL8A1","CSRP2","DCBLD2","DENR","	MFSD1","NDRG4","SENCR","SMCN1","SPON1","UNC45A","YIPF5") )
 
+# numsig.rel <- rowSums(lfsr_m.c<0.9)
+# mytop <- (numsig.str==1 & numsig.rel==1)
+# sum(mytop)
 
-#res_select<-res %>% filter(padj<0.1 & !is.na(pvalue))
+# nabstr <- rowSums(lfsr_m.c<0.01)
+# nberel <- rowSums(lfsr_m.c>0.2)
+# mytop <- (nabstr<3 & nabstr>1 & (nberel+nabstr>10))
+# sum(mytop)
+# 
+# mytop <- (nabstr<3 & nabstr>1 & (nberel+nabstr>8))
+# sum(mytop)
+# 
+# nabstr <- rowSums(lfsr_m.c<0.01)
+# nberel <- rowSums(lfsr_m.c>0.2)
+# mytop <- (nabstr<4 & nabstr>1 & (nberel+nabstr>12))
+# sum(mytop)
 
-#which(res_select$gene_name %in% c("COL8A1","CSRP2","DCBLD2","DENR","	MFSD1","NDRG4","SENCR","SMCN1","SPON1","UNC45A","YIPF5") )
 
 
 mytop[which(names(mytop) %in%sample_genes)]<-TRUE
@@ -146,36 +165,6 @@ plot_func<-function(m.c,mytop,k=1,outFolder)
 system(paste0("mkdir -p ",paste0(outFolder,"smc_genes/")))
 # call to generate metaplots for all genes TRUE in mytop:
 plot_func(m.c,mytop,outFolder=paste0(outFolder,"smc_genes/"))
-
-
-# numsig.rel <- rowSums(lfsr_m.c<0.9)
-# mytop <- (numsig.str==1 & numsig.rel==1)
-# sum(mytop)
-# 
-# 
-# nabstr <- rowSums(lfsr_m.c<0.01)
-# nberel <- rowSums(lfsr_m.c>0.2)
-# mytop <- (nabstr<3 & nabstr>1 & (nberel+nabstr>10))
-# sum(mytop)
-# 
-# mytop <- (nabstr<3 & nabstr>1 & (nberel+nabstr>8))
-# sum(mytop)
-# 
-# nabstr <- rowSums(lfsr_m.c<0.01)
-# nberel <- rowSums(lfsr_m.c>0.2)
-# mytop <- (nabstr<4 & nabstr>1 & (nberel+nabstr>12))
-# sum(mytop)
-# 
-# 
-# 
-# intersected_genes<-read.csv(paste0(outFolder2,"intersected_genes.csv"),stringsAsFactors = FALSE)
-# #sample_genes<-res$kbid[which(res$gene_name %in% c("OXTR","COX2","CAM","Cx43","GJA1","PTGES2")) ]
-# sample_genes<-res$kbid[which(res$gene_name %in% hub_scores$gene_name[1:50])]
-# sample_genes<-res$kbid[which(res$gene_name %in% c("TCIRG1","ADAM15","MAP1B","PNPLA2","PLEKHO1","IFI16","HTRA1","FAM129A","CD52","EFHD2","CD82","ACOT7","WDR1","RRP9","OXTR","COX2","CAM","Cx43","GJA1","PTGES2","SCD")) ]
-# sample_genes<-res$kbid[which(res$gene_name %in% c("MMP9","STOM","METTL9","MSR1","MCEMP1","TFDP1","TSTA3","GMPR","HK1","FOXO3","P2RX7","MYOF","ABCG1","OLR1")) ]
-# sample_genes<-res$kbid[which(res$gene_name %in% unique(intersected_genes$gene_name)) ]
-# sample_genes<-res$kbid[which(res$gene_name %in% c("PRKG1", "PDE5A","PLN")) ]
-# 
 
 
 
@@ -267,9 +256,6 @@ resJoin_stratified_full_list<-resJoin_stratified_full_list %>% dplyr::select(kbi
 
 write.csv( resJoin_stratified_full_list, file="12_downstream_analysis/TLvsTNL_blood_ENTREZ/resJoin_stratified_full_list_v2.csv")
 
-#write.csv( resJoin_stratified, file="8_outputs_DESeq_Plots/TLvsTNL_blood_ENTREZ/resJoin_stratified_v2.csv")
-
-
 resJoin<-resJoin_stratified
 
 # for (i in 1:length(unique(resJoin$Cell_type)))
@@ -308,7 +294,6 @@ mytop[which(names(mytop) %in%sample_genes)]<-TRUE
 
 
 gene_select<-unique(resJoin_stratified$gene_name)
-
 
 system(paste0("mkdir -p ",paste0(outFolder,"smc-1/")))
        
@@ -393,8 +378,6 @@ hist(rowSums(DEgene_cluster))
 
 ## heatmap 
 
-
-
 pairwise_sharing_data<-get_pairwise_sharing(m.c)
 
 fname=paste0(outFolder,"heatmap_pairwise_sharing.pdf");
@@ -419,7 +402,7 @@ m2 <- mt[,comb_size(mt)>10]
 #m2 <- mt[comb_degree(mt)>0]
 #fig0 <- UpSet(m2, set_order=colnames(lfsr),comb_order=order(comb_size(m2)))#sets.bar.color = cluster.Colors[colnames(res_df)]
 fig0 <- UpSet(m2,set_order=colnames(lfsr),comb_order=order(comb_size(m2)))
-pdf(file=paste0(outFolder,"upsetplot_lfsr_comb_size25.pdf"))#,width=45,height=20)# or other device
+pdf(file=paste0(outFolder,"upsetplot_lfsr_comb_size25.pdf"))
 
 fig0
 dev.off()

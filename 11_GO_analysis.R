@@ -1,11 +1,9 @@
-####################################################################
+###################################################
+### pathway enrichment analysis
 
-# pathway analysis
+###################################################
 
-####################################################################
 library(tidyverse)
-##library(knitr)
-##library(annotables)
 library(qqman)
 library(clusterProfiler)
 library(ReactomePA)
@@ -13,82 +11,12 @@ library(dplyr)
 library(stringr)
 
 
-
-#source("theme_black.R")
-#+ theme_black()
-#++ theme_bw()
-
-
-#outFolder <- paste0("11_pathway_enrichment/")
-#outFolder <- paste0("11_pathway_enrichment_FC.0.5/")
 outFolder <- paste0("11_pathway_enrichment_FC.0.5/whitebackground/")
 system(paste0("mkdir -p ",outFolder))
 
-res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+######################################################################################################
 
-# Adding location, cell type, and origin columns 
-res <- res %>% separate(cname,c("Cluster","Origin"),sep="_",remove=FALSE) #Cell_type
-
-
-
-clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte",
-               "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Stromal Fibroblast",
-               "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells","Macrophage-4","B-cell","Unciliated Epithelial")
-
-names(clust2Names)<-c(0:23)
-res$Cell_type<-clust2Names[res$Cluster]
-res$cname<-paste0(res$Cell_type,"_",res$Origin)  
-    
-# Removing na pvalues
-# Grouping pvalues based on the Location,Cell_type,and Origin
-# Adding a column showing the rank of each pvalue devided by the number of pvalues in each group 
-res2 <- res %>% filter(!is.na(pvalue)) %>%
-    arrange(pvalue) %>%
-    group_by(Cell_type,Origin) %>%
-    mutate(r=rank(pvalue, ties.method = "random"),pexp=r/length(pvalue))
-
-#cluster colors
-#new_names <- read_tsv("../2020-10-02/5_harmony_cellClass_plots_res0.8/ClusterAssignment.res0.8.tsv")
-#clust2Names <- new_names$scLabor_ID
-#names(clust2Names) <- new_names$seurat_clusters
-# cc <- new_names %>% select(scLabor_ID,color) %>% unique 
-# cluster.Colors <- cc$color
-# names(cluster.Colors) <- cc$scLabor_ID
-
-
-#ENTREZID id 
-eg = bitr(res2$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
-names(eg)[1]="gene_name"
-head(eg)
-
-e2g <- eg$gene_name
-names(e2g) <- eg$ENTREZID
-
-
-# non-na ENTREZID were included
-res3 <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
-
-#exploratory analysis
-# # counting the number of DE genes per cname   
-DE_per_cname<-sapply(unique(res3$cname), function(x,padj_cutoff=0.1,log2FoldChange_cutoff=0.5){
-    aux <- res3 %>% filter(cname==x)
-    genes <- filter(aux,padj<padj_cutoff,abs(log2FoldChange)>log2FoldChange_cutoff) %>% dplyr::select(ENTREZID) %>% unlist
-    geneUniv <- aux %>% dplyr::select(ENTREZID) %>% unlist
-    ##geneList <- aux$log2FoldChange
-    geneList <- -log10(aux$pvalue)
-    names(geneList) <- aux$ENTREZID
-    geneList = sort(geneList, decreasing = TRUE)
-    length(genes)
-    
-})
-
-which(DE_per_cname>0)
-cname_selected<-names(DE_per_cname)[which(DE_per_cname>0)]
-
-
-#qvalueCutoff  = 0.05
-
-pathway_enrich<-function(res_gene=res3,cname_select="CAM_T-cell_M",padj_cutoff=0.1,log2FoldChange_cutoff=0.5)
+pathway_enrich<-function(res_gene=res3,cname_select="CAM_T-cell_M",padj_cutoff=0.1,log2FoldChange_cutoff=0)
 {
     cat ("=============== ",cname_select,"=============== ", "\n")
     pathway_enrich_cname_dir<-paste0(outFolder,cname_select,"/")
@@ -128,7 +56,7 @@ pathway_enrich<-function(res_gene=res3,cname_select="CAM_T-cell_M",padj_cutoff=0
     print(head(erpath))
     result$enrichPathway<-erpath
     #save(erpath,file=paste0(pathway_enrich_cname_dir,"erpath.RData"))
-   # write.csv(erpath,file=paste0(pathway_enrich_cname_dir,"erpath.csv"))
+    # write.csv(erpath,file=paste0(pathway_enrich_cname_dir,"erpath.csv"))
     
     message(".................................")
     message("gseGO")
@@ -145,12 +73,58 @@ pathway_enrich<-function(res_gene=res3,cname_select="CAM_T-cell_M",padj_cutoff=0
     gseRPath.res <- gsePathway(geneList)
     print(head(gseRPath.res))
     result$gsePathway<-gseRPath.res
-    #save(gseRPath.res,file=paste0(pathway_enrich_cname_dir,"gseRPath.res.RData"))
-    #write.csv(gseRPath.res,file=paste0(pathway_enrich_cname_dir,"gseRPath.res.csv"))
     return (result)
-    }
+}
 
 
+
+# load DE genes
+res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+
+# Adding location, cell type, and origin columns 
+res <- res %>% separate(cname,c("Cluster","Origin"),sep="_",remove=FALSE) #Cell_type
+
+
+clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Stromal Fibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells","Macrophage-4","B-cell","Unciliated Epithelial")
+names(clust2Names)<-c(0:23)
+res$Cell_type<-clust2Names[res$Cluster]
+res$cname<-paste0(res$Cell_type,"_",res$Origin)  
+    
+
+# Removing na pvalues
+# Grouping pvalues based on the Location,Cell_type,and Origin
+# Adding a column showing the rank of each pvalue devided by the number of pvalues in each group 
+res2 <- res %>% filter(!is.na(pvalue)) %>%
+    arrange(pvalue) %>%
+    group_by(Cell_type,Origin) %>%
+    mutate(r=rank(pvalue, ties.method = "random"),pexp=r/length(pvalue))
+
+
+#ENTREZID id 
+eg = bitr(res2$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
+names(eg)[1]="gene_name"
+head(eg)
+
+e2g <- eg$gene_name
+names(e2g) <- eg$ENTREZID
+
+# non-na ENTREZID were included
+res3 <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
+
+#exploratory analysis
+# # counting the number of DE genes per cname   
+DE_per_cname<-sapply(unique(res3$cname), function(x,padj_cutoff=0.1,log2FoldChange_cutoff=0.5){
+    aux <- res3 %>% filter(cname==x)
+    genes <- filter(aux,padj<padj_cutoff,abs(log2FoldChange)>log2FoldChange_cutoff) %>% dplyr::select(ENTREZID) %>% unlist
+    geneUniv <- aux %>% dplyr::select(ENTREZID) %>% unlist
+    geneList <- -log10(aux$pvalue)
+    names(geneList) <- aux$ENTREZID
+    geneList = sort(geneList, decreasing = TRUE)
+    length(genes)
+    
+})
+
+cname_selected<-names(DE_per_cname)[which(DE_per_cname>0)]
 result_pathway_en_list<-lapply(cname_selected, function(x) return(pathway_enrich(res3,x)))
 names(result_pathway_en_list)<-cname_selected
 
@@ -162,18 +136,11 @@ which(DE_per_cname>0)
 #####                                  dot plot
 ##########################################################################################
 
-#per cname
-
-# how to calculate GeneRatio
-#https://github.com/YuLab-SMU/DOSE/issues/20
-
-
 
 load(paste0("11_pathway_enrichment_FC.0.5/pathwayEnrich_result.RData"))
 cname_selected<-names(result_pathway_en_list)
 
 
-##selecting cname with #DE >5
 DE_per_cname_select<-names(DE_per_cname)[which(DE_per_cname>=5)]
 result_pathway_en_list<-result_pathway_en_list [DE_per_cname_select]
 cname_selected<-names(result_pathway_en_list)
@@ -205,10 +172,6 @@ res_gseGO_list<-lapply(cname_selected, function(x)
 
 res_df_gseGO <- do.call(rbind,res_gseGO_list)
 
-#result_pathway_en_list$CAM_LED_M$gseGO@result$setSize
-# Count is the number of core genes and GeneRatio is Count/setSize
-
-
 res_df_gseGO<-res_df_gseGO[1:15,]
 pdf(paste0(outFolder,"gseGO_cname_DotPlot.pdf"),width=10,height=10)
 ggplot(res_df_gseGO, 
@@ -220,19 +183,9 @@ ggplot(res_df_gseGO,
     theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=30)) +
     labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term" #enrichmentScore
     ylab(NULL)+ 
-    #theme_black()+
-    theme_bw()+
-    theme(text = element_text(size=30)) +
-    theme(axis.text.x = element_text(angle = 45))+
     xlab(NULL) +
-    theme(axis.text.y = element_text(hjust = 1))+
+    theme_bw()+
     theme(axis.text=element_text(size=30),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
-
-    
-    #+
-    #theme_black()
-    #coord_fixed(ratio = .8)
-    #ggtitle("GO pathway enrichment")
 dev.off()
 
 
@@ -271,21 +224,13 @@ ggplot(res_df_enrichGO, # you can replace the numbers to the row number of pathw
        aes(x = cname, y = Description)) +
     geom_point(aes(size = GeneRatio, color = p.adjust)) +
     theme_bw(base_size = 14) +
-    #scale_colour_gradient(limits=c(0, 0.10), low="red") +
     scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
-    #theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=30)) +
     labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
     ylab(NULL)+
     xlab(NULL)+
     coord_fixed(ratio = 1)+
-    #theme_black()+
     theme_bw()+
-    #theme(axis.text.x = element_text(angle = 45))+
-    theme(text = element_text(size=30)) +
-    theme(axis.text.y = element_text(hjust = 1))+
     theme(axis.text=element_text(size=30),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
-    
-#ggtitle("GO pathway enrichment")
 dev.off()
 
 
@@ -324,8 +269,6 @@ pdf(paste0(outFolder,"enrichKEGG_cname_DotPlot.pdf"),width=10,height=10)
 ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pathway of your interest
        aes(x = cname, y = Description)) + 
     geom_point(aes(size = GeneRatio, color = p.adjust)) +
-    theme_bw(base_size = 11) +
-    #scale_colour_gradient(limits=c(0, 0.10), low="red") +
     scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
     theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=30)) +
     labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
@@ -333,13 +276,7 @@ ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pat
     xlab(NULL)+
     #theme_black()+
     theme_bw()+
-    theme(axis.text.x = element_text(angle = 45))+
-    theme(axis.text.y = element_text(hjust = 1))+
-    theme(text = element_text(size=40)) +
     theme(axis.text=element_text(size=30),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
-
-    #coord_fixed(ratio = .8)
-#ggtitle("GO pathway enrichment")
 dev.off()
 
 
@@ -379,29 +316,20 @@ pdf(paste0(outFolder,"enrichPathway_cname_DotPlot.pdf"),width=10,height=10)
 ggplot(res_df_enrichPathway, # you can replace the numbers to the row number of pathway of your interest
     aes(x = cname, y = Description)) +
     geom_point(aes(size = GeneRatio, color = p.adjust)) +
-    theme_bw(base_size = 11) +
-    #scale_colour_gradient(limits=c(0, 0.10), low="red") +
     scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
-   
     labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
     ylab(NULL)+
     xlab(NULL)+
     coord_fixed(ratio = 1)+
-    #theme_black()+
     theme_bw()+
-    theme(axis.text.x = element_text(angle = 45))+
-    theme(axis.text.y = element_text(hjust = 1))
-    theme(text = element_text(size=40)) +
     theme(axis.text=element_text(size=30),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
-    
-    #scale_x_discrete(expand = c(0,1.9))+
-    #scale_y_discrete(expand = c(0,20))
-#ggtitle("GO pathway enrichment")
 dev.off()
 
 ############################################################
 
-### Combined
+### DE genes combined
+
+############################################################
 
 
 genes <- filter(res3,padj<0.1,abs(log2FoldChange)>0.5) %>% dplyr::select(ENTREZID) %>% unlist %>% unique
@@ -410,10 +338,6 @@ geneUniv <- res3 %>% dplyr::select(ENTREZID) %>% unlist %>% unique
 geneList <- -log10(res3$pvalue)
 names(geneList) <- res3$ENTREZID
 geneList = sort(geneList, decreasing = TRUE)
-
-
-
-
 
 message(".................................")
 message("enrichGO")
@@ -439,15 +363,8 @@ ggplot(res_df_enrichGO, # you can replace the numbers to the row number of pathw
     labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
     ylab(NULL)+ 
     xlab(NULL)+
-    #theme_black()+
     theme_bw()+
-    theme(axis.text.x = element_text(angle = 45))+
-    theme(axis.text.y = element_text(hjust = 1))+
-    theme(text = element_text(size=30)) +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
-
-#coord_fixed(ratio = 1)
-#ggtitle("GO pathway enrichment")
 dev.off()
 
 
@@ -457,7 +374,6 @@ print(".................................")
 print("enrichKEGG")
 ekegg <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa")
 print(head(ekegg)) 
-
 
 res_df_enrichKEGG<-ekegg@result%>% filter(qvalue<=0.05)
 
@@ -472,86 +388,14 @@ ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pat
        aes(x = GeneRatio, y = Description)) + 
     geom_point(aes(size = GeneRatio, color = p.adjust)) +
     theme_bw(base_size = 14) +
-    #scale_colour_gradient(limits=c(0, 0.10), low="red") +
     scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
     theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=10)) +
     labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
     ylab(NULL)+ 
     xlab(NULL)+
-    #theme_black()+
     theme_bw()+
-    theme(axis.text.x = element_text(angle = 45))+
-    theme(axis.text.y = element_text(hjust = 1))+
-    theme(text = element_text(size=30)) +
     theme(axis.text=element_text(size=30), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
-
-#coord_fixed(ratio = 1)
-#ggtitle("GO pathway enrichment")
 dev.off()
-
-
-
-
-
-
-# message(".................................")
-# message("gseGO")
-# gseGO.res <- gseGO(geneList,  OrgDb=org.Hs.eg.db,ont="BP")
-# print(head(gseGO.res))
-# save(gseGO.res,file=paste0(outFolder,"gseGO.res_combined.RData"))
-
-# #plot
-# res_df<-gseGO.res@result[1:10,]
-# res_df<-res_df %>% filter(qvalues<=0.05)
-# pdf(paste0(outFolder,"gseGO.res_combined_DotPlot.pdf"),width=20,height=10)
-# ggplot(res_df, # you can replace the numbers to the row number of pathway of your interest
-#        aes(x = enrichmentScore, y = Description)) + 
-#     geom_point(aes(size = enrichmentScore, color = p.adjust)) +
-#     theme_bw(base_size = 11) +
-#     #scale_colour_gradient(limits=c(0, 0.10), low="red") +
-#     scale_color_gradient(low = "red",  high = "blue", space = "Lab", limit = c(0.00001, 0.03))+
-#     theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=30)) +
-#     labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term"
-#     ylab(NULL) 
-#     #xlab(NULL)
-#    #coord_fixed(ratio =1.9)
-# #ggtitle("GO pathway enrichment")
-# dev.off()
-# #pdf(paste0(outFolder,"gseGO.res_combined.pdf"),width=10,height=20)  
-# #print(dotplot(gseGO.res))
-# #dev.off()  
-
-# message(".................................")
-# message("gsePathway")
-# gseRPath.res <- gsePathway(geneList)
-# print(head(gseRPath.res))
-# save(gseRPath.res,file=paste0(outFolder,"gseRPath.res_combined.RData"))
-# #pdf(paste0(outFolder,"gseRPath.res_combined.pdf"),width=20,height=30)  
-# #print(dotplot(gseRPath.res))
-# #dev.off() 
-# 
-# #plot
-# res_df<-gseRPath.res@result[1:10,]
-# res_df<-res_df %>% filter(qvalues<=0.05)
-# pdf(paste0(outFolder,"gseRPath.res_combined_DotPlot.pdf"),width=30,height=20)
-# ggplot(res_df, # you can replace the numbers to the row number of pathway of your interest
-#        aes(x = enrichmentScore, y = Description)) + 
-#     geom_point(aes(size = enrichmentScore, color = p.adjust)) +
-#     theme_bw(base_size = 11) +
-#     #scale_colour_gradient(limits=c(0, 0.10), low="red") +
-#     scale_color_gradient(low = "red",  high = "blue", space = "Lab", limit = c(0.00001, 0.03))+
-#     theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=30)) +
-#     labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term"
-#     ylab(NULL) 
-# #xlab(NULL)
-# #coord_fixed(ratio =1.9)
-# #ggtitle("GO pathway enrichment")
-# dev.off()
-# #pdf(paste0(outFolder,"gseGO.res_combined.pdf"),width=10,height=20)  
-# #print(dotplot(gseGO.res))
-# #dev.off() 
-
-
 
 message(".................................")
 message("enrichPathway")
@@ -565,26 +409,18 @@ res_df_enrichPathway$GeneRatio<-sapply(res_df_enrichPathway$GeneRatio, function(
     return (as.numeric(numden[1])/as.numeric(numden[2]))
 })
 
-#res_df_enrichPathway<-res_df_enrichPathway[1:20,]
 pdf(paste0(outFolder,"enrichPathway.combined_DotPlot.pdf"),width=10,height=10)
 ggplot(res_df_enrichPathway, # you can replace the numbers to the row number of pathway of your interest
-       aes(x = GeneRatio, y = Description)) + 
+    aes(x = GeneRatio, y = Description)) + 
     geom_point(aes(size = GeneRatio, color = p.adjust)) +
     theme_bw(base_size = 11) +
-    #scale_colour_gradient(limits=c(0, 0.10), low="red") +
     scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
     theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=20)) +
     labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
     ylab(NULL)+ 
     xlab(NULL)+
-   #theme_black()+
     theme_bw()+
-    theme(axis.text.x = element_text(angle = 45))+
-    theme(axis.text.y = element_text(hjust = 1))+
-    theme(text = element_text(size=30))+
     theme(axis.text=element_text(size=30), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
-
-#coord_fixed(ratio = 2)
 dev.off()
 
 
