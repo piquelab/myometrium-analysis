@@ -17,7 +17,8 @@ system(paste0("mkdir -p ",outFolder))
 
 
 ##loading all DE genes FDR < 0.1
-res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
 
 
 # Adding location, cell type, and origin columns 
@@ -31,6 +32,72 @@ names(clust2Names)<-c(0:23)
 res$Cell_type<-clust2Names[res$Cell_type]
 
 
+
+# covid investigation
+
+# res <- read_tsv("/wsu/home/fd/fd43/fd4387/scilab/labor2/covid-analysis/2020-11-16_Azam/7_outputs_DESeq_ConditionsByCluster_filtered_HPL20874_2020-11-28/ALL.combined.2020-11-28.tsv")
+# 
+# # Adding location, cell type, and origin columns 
+# res <- res %>% separate(cname,c("Location","Cell_type","Origin"),sep="_",remove=FALSE)
+# res <- res %>% filter(!is.na(pvalue))
+# res<-res[order(abs(res$log2FoldChange), abs(res$baseMean),decreasing = TRUE),]
+
+
+#covid 
+sc <- read_rds("/wsu/home/fd/fd43/fd4387/scilab/labor2/covid-analysis/2020-10-02/6_harmony_rename_res0.8_plots/SeuratObject.rds")
+
+
+
+sc<- read_rds("6_harmony_cellClass_plots_res0.8_final/SeuratObject.rds")
+
+cmd <- paste0("zcat ",
+              "/wsu/home/groups/piquelab/data/gencode/Gencode_human/release_31/gencode.v31.annotation.gff3.gz",
+              " | awk '$3~/gene/'",
+              " | sed 's/ID=.*gene_id=//;s/;gene_type=/\\t/;s/;gene_name=/\\t/;s/;.*//'")
+cat(cmd,"\n")
+
+## Check 0 or 1-based coordinates. 
+
+aux <- data.table::fread(cmd=cmd) %>% mutate(TSS=ifelse(V7=="+",V4,V5)) %>%
+  select(Chr=V1,Min=V4,Max=V5,kbid=V9,TSS,Strand=V7,Type=V10,gene_name=V11) 
+##anno <- tibble(kbid=rownames(sc)) %>% mutate(ensgene=gsub("\\..*","",kbid)) %>% left_join(grch38)
+
+anno <- tibble(kbid=rownames(sc),rs=rowSums(sc@assays$RNA@data)) %>% filter(rs>0) %>% left_join(aux) %>%
+  filter(!is.na(Chr))
+
+table(is.na(anno$Chr))
+
+table(anno$Chr)
+
+table(anno$Type)
+
+head(anno)
+
+head(aux)
+
+# anno$gene_name[which(anno$kbid=="ENSG00000184995.7")]
+
+clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+names(clust2Names)<-c(0:23)
+
+sc$cluster_name<-clust2Names[sc$seurat_clusters]
+
+
+x<-aux <- FetchData(sc,"ENSG00000184995.7")
+y <- FetchData(sc,"cluster_name") 
+z<-FetchData(sc,"seurat_clusters") 
+#table(x>0,y)
+
+
+clusters<-y$cluster_name[which(rownames(y) %in% rownames(x)[which(x>0)])]
+names(clusters)<-rownames(y)[which(rownames(y) %in% rownames(x)[which(x>0)])]
+
+mat<-cbind(names(clusters),clusters, aux[names(clusters),],as.integer(z[names(clusters),]))
+colnames(mat)<-c("barcode","cell-type","transcript","cluster-ID")
+# write.csv(mat, file="transcript_matrix_covid19_v2_IFNE.csv",quote = FALSE,row.names = FALSE)
+write.csv(mat, file="transcript_matrix_myometrium_IFNE.csv",quote = FALSE,row.names = FALSE)
+
+  
 ################################################
 # Violin pot
 ################################################

@@ -209,8 +209,11 @@ res_df_gseGO <- do.call(rbind,res_gseGO_list)
 # Count is the number of core genes and GeneRatio is Count/setSize
 
 
-res_df_gseGO<-res_df_gseGO[1:15,]
-pdf(paste0(outFolder,"gseGO_cname_DotPlot.pdf"),width=10,height=10)
+res_df_gseGO <- do.call(rbind,res_gseGO_list)
+res_df_gseGO<-res_df_gseGO %>% filter(p.adjust<0.1)
+
+#res_df_gseGO<-res_df_gseGO[1:15,]
+pdf(paste0(outFolder,"gseGO_cname_DotPlot.pdf"),width=20,height=12)
 ggplot(res_df_gseGO, 
        aes(x = cname, y = Description)) + 
     geom_point(aes(size = enrichmentScore, color = p.adjust)) +
@@ -223,16 +226,10 @@ ggplot(res_df_gseGO,
     #theme_black()+
     theme_bw()+
     #theme(text = element_text(size=30)) +
-    #theme(axis.text.x = element_text(angle = 90))+
+    theme(axis.text.x = element_text(angle = 90))+
     xlab(NULL) +
     theme(axis.text.y = element_text(hjust = 1))
-    #theme(axis.text=element_text(size=30),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
-
-    
-    #+
-    #theme_black()
-    #coord_fixed(ratio = .8)
-    #ggtitle("GO pathway enrichment")
+#theme(axis.text=element_text(size=30),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
 dev.off()
 
 
@@ -264,9 +261,9 @@ res_df_enrichGO$GeneRatio<-sapply(res_df_enrichGO$GeneRatio, function(x){
     return (as.numeric(numden[1])/as.numeric(numden[2]))
 })
 
-res_df_enrichGO<-res_df_enrichGO[1:15,]
+#res_df_enrichGO<-res_df_enrichGO[1:15,]
 
-pdf(paste0(outFolder,"enrichGO_cname_DotPlot.pdf"),width=10,height=10)
+pdf(paste0(outFolder,"enrichGO_cname_DotPlot.pdf"),width=25,height=15)
 ggplot(res_df_enrichGO, # you can replace the numbers to the row number of pathway of your interest
        aes(x = cname, y = Description)) +
     geom_point(aes(size = GeneRatio, color = p.adjust)) +
@@ -283,8 +280,8 @@ ggplot(res_df_enrichGO, # you can replace the numbers to the row number of pathw
     #theme(axis.text.x = element_text(angle = 45))+
     #theme(text = element_text(size=30)) +
     theme(axis.text.y = element_text(hjust = 1))+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-    
+    theme(axis.text.x = element_text(angle = 90, hjust=1)) 
+
 #ggtitle("GO pathway enrichment")
 dev.off()
 
@@ -319,8 +316,11 @@ res_df_enrichKEGG$GeneRatio<-sapply(res_df_enrichKEGG$GeneRatio, function(x){
 })
 
 
-res_df_enrichKEGG<-res_df_enrichKEGG[1:15,]
-pdf(paste0(outFolder,"enrichKEGG_cname_DotPlot.pdf"),width=10,height=10)
+#res_df_enrichKEGG<-res_df_enrichKEGG[1:15,]
+
+res_df_enrichKEGG<-res_df_enrichKEGG %>% filter(p.adjust<0.1) 
+#res_df_enrichKEGG<-res_df_enrichKEGG[1:15,]
+pdf(paste0(outFolder,"enrichKEGG_cname_DotPlot.pdf"),width=20,height=12)
 ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pathway of your interest
        aes(x = cname, y = Description)) + 
     geom_point(aes(size = GeneRatio, color = p.adjust)) +
@@ -337,9 +337,7 @@ ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pat
     theme(axis.text.y = element_text(hjust = 1))+
     #theme(text = element_text(size=40)) +
     #theme(axis.text=element_text(size=30),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-    #coord_fixed(ratio = .8)
-#ggtitle("GO pathway enrichment")
+    theme(axis.text.x = element_text(angle = 90, hjust=1)) 
 dev.off()
 
 
@@ -374,15 +372,15 @@ res_df_enrichPathway$GeneRatio<-sapply(res_df_enrichPathway$GeneRatio, function(
     return (as.numeric(numden[1])/as.numeric(numden[2]))
 })
 
-res_df_enrichPathway<-res_df_enrichPathway[1:15,]
-pdf(paste0(outFolder,"enrichPathway_cname_DotPlot.pdf"),width=10,height=10)
+#res_df_enrichPathway<-res_df_enrichPathway[1:15,]
+pdf(paste0(outFolder,"enrichPathway_cname_DotPlot.pdf"),width=22,height=12)
 ggplot(res_df_enrichPathway, # you can replace the numbers to the row number of pathway of your interest
-    aes(x = cname, y = Description)) +
+       aes(x = cname, y = Description)) +
     geom_point(aes(size = GeneRatio, color = p.adjust)) +
     theme_bw(base_size = 11) +
     #scale_colour_gradient(limits=c(0, 0.10), low="red") +
     scale_color_gradient(low = "red",  high = "blue", space = "Lab")+
-   
+    
     labs(size="GeneRatio",color="p.adjust") + #x="",y="GO term"
     ylab(NULL)+
     xlab(NULL)+
@@ -393,9 +391,9 @@ ggplot(res_df_enrichPathway, # you can replace the numbers to the row number of 
     theme(axis.text.y = element_text(hjust = 1))+
     #theme(text = element_text(size=40)) +
     #theme(axis.text=element_text(size=30),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-    #scale_x_discrete(expand = c(0,1.9))+
-    #scale_y_discrete(expand = c(0,20))
+    theme(axis.text.x = element_text(angle = 90,  hjust=1)) 
+#scale_x_discrete(expand = c(0,1.9))+
+#scale_y_discrete(expand = c(0,20))
 #ggtitle("GO pathway enrichment")
 dev.off()
 

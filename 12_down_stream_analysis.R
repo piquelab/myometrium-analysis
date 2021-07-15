@@ -225,6 +225,22 @@ head(get_lfsr(m.c))
 
 write_rds(lfsr_m.c, paste0(outFolder,"lfsr_m.c.rds"))
 
+
+
+# comparison based on negative and positive effects 
+######################
+PosteriorMean<-m.c$result$PosteriorMean
+PosteriorMean_positive<-rownames(PosteriorMean)[which(PosteriorMean>0)]
+PosteriorMean_negative<-rownames(PosteriorMean)[which(PosteriorMean<0)]
+
+outFolder2 <- paste0("12_mash_analysis/")
+system(paste0("mkdir -p ",outFolder2))
+write_rds(m.c, paste0(outFolder2,"m.c.rds"))
+write_rds(PosteriorMean_positive, paste0(outFolder2,"PosteriorMean_positive.rds"))
+write_rds(PosteriorMean_negative, paste0(outFolder2,"PosteriorMean_negative.rds"))
+
+
+
 #######################
 
 ##################################################################################
@@ -385,7 +401,6 @@ pdf(fname,width=7,height=7)
 pheatmap(pairwise_sharing_data,cluster_rows=TRUE,cluster_cols=TRUE,scale="none")
 dev.off()
 
-
 #############################################
 ### upset plot 
 #############################################
@@ -406,7 +421,6 @@ pdf(file=paste0(outFolder,"upsetplot_lfsr_comb_size25.pdf"))
 
 fig0
 dev.off()
-
 
 
 
