@@ -1,4 +1,11 @@
 
+
+#############################################################
+###  Cell markers
+### 
+#############################################################
+
+
 library(tidyverse)
 ##library(knitr)
 library(DESeq2)
@@ -21,8 +28,6 @@ sc <- read_rds("6_harmony_cellClass_plots_res0.8_final/SeuratObject.rds")
 md <- sc@meta.data
 
 # filter sample "HPL20874"
-
-
 # md <- filter(md,!Pregnancy_ID %in% filter_sample)
 # #md <- filter(md,!Pregnancy_ID %in% c("HPL20874","HPL20875"))
 # 
@@ -30,6 +35,8 @@ md <- sc@meta.data
 # length(md$Pregnancy_ID=="HPL20874")
 # 
 # length(md$Pregnancy_ID %in% c("HPL20874","HPL20875"))
+
+
 
 ## Load gene annotations. 
 anno <- read_rds("3_MergeDemux_Output/anno.rds")
