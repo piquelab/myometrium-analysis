@@ -283,7 +283,8 @@ res_deconBulk<-res %>% filter(padj<0.1,abs(log2FoldChange)>0)
 res_deconBulk_genes<-res_deconBulk %>% filter (ENTREZID %in% genes_Myometrialpathway) 
 write.csv(res_deconBulk_genes,file=paste0("14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/genes_bulk-deconv_wikiMyometrialpathway.csv"))
 
-res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/SIG.combined.2021-10-18.tsv")
 
 eg = bitr(res$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
 names(eg)[1]="gene_name"
@@ -316,7 +317,8 @@ length(which(! res_single_cell_SMC$ENTREZID %in% res_deconvBulk_SMC$ENTREZID))
 # ORA - single cell and deconv bulk
 ##############################################################################
 
-res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/SIG.combined.2021-10-18.tsv")
 
 eg = bitr(res$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
 names(eg)[1]="gene_name"
@@ -345,7 +347,7 @@ res_deconvBulk_SMC<-res_deconBulk %>% filter (celltype== "Smoothmusclecells" )
 
 
 res_deconBulk<-res %>% filter(padj<0.1,abs(log2FoldChange)>0) 
-genes_deconvBulk_SMC<-res_deconvBulk_SMC %>%filter(padj <0.1 & abs(log2FoldChange)>0.5)%>% select(gene_name) %>% unlist %>% unique
+genes_deconvBulk_SMC<-res_deconvBulk_SMC %>%filter(padj <0.1 & abs(log2FoldChange)>0.5)%>% dplyr::select(gene_name) %>% unlist %>% unique
 
 
 genes <- unique(c(res_deconBulk$ENTREZID, res_single_cell_SMC$ENTREZID))
@@ -362,6 +364,10 @@ res_df_enrichGO$GeneRatio<-sapply(res_df_enrichGO$GeneRatio, function(x){
   numden<-unlist(strsplit(x,"/"))
   return (as.numeric(numden[1])/as.numeric(numden[2]))
 })
+
+outFolder<-"14_deconvolution_analysis_plots_batch_correction/"
+system(paste0("mkdir -p ",outFolder))
+
 
 pdf(paste0(outFolder,"enrichGO_decov_combined_singlecell_SMC_DotPlot.pdf"),width=10,height=10)
 ggplot(res_df_enrichGO, # you can replace the numbers to the row number of pathway of your interest
@@ -463,7 +469,9 @@ res_dfewp$GeneRatio<-sapply(res_dfewp$GeneRatio, function(x){
 })
 
 
+outFolder<-"./14_deconvolution_analysis_plots_batch_correction/"
 pdf(paste0(outFolder,"enrichWiki_decov_SMC_singlecell_SMC_DotPlot_0.05.pdf"),width=10,height=10)
+res_dfewp<-res_dfewp %>% filter(qvalue<0.1)
 ggplot(res_dfewp, # you can replace the numbers to the row number of pathway of your interest
        aes(x = GeneRatio, y = Description)) + 
   geom_point(aes(size = GeneRatio, color = p.adjust)) +
@@ -479,7 +487,7 @@ dev.off()
 
 res_dfewp$Description[1]
 
-genes_Myometrialpathway<-unlist(strsplit(res_dfewp$geneID[1],"/"))
+genes_Myometrialpathway<-unlist(strsplit(res_dfewp$geneID[which(res_dfewp$Description=="Myometrial Relaxation and Contraction Pathways")],"/"))
 save(genes_Myometrialpathway,file=paste0(outFolder,"genes_Myometrialpathway_decov_all_singlecell_SMC1_ORAwiki_myogenes.RData"))
 
 
