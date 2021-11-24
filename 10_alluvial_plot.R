@@ -7,6 +7,13 @@ library(tidyverse)
 library(Seurat)
 library(ggalluvial)
 
+################################################################################
+# Cell-cell communication using CellChat
+
+# Outgoing and incoming patterns (alluvial plots)
+################################################################################
+
+
 outFolder="./10_CellChat_analysis_customized/"
 pathways.show<-c("contraction","COLLAGEN","LAMININ","MIF","GALECTIN","CCL","IL1","COMPLEMENT","PDGF","TNF","THY1","TGFb","IFN-II","IL6","IL2")
 nPatterns = 3
