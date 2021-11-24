@@ -35,8 +35,12 @@ names(clust2Names)<-c(0:23)
 
 # load DE genes across cell types
 
-res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
-outFolder<-"./8_outputs_DESeq_Plots/"
+#res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
+
+
+outFolder<-"./8_outputs_DESeq_batch_library_Plots/"
+#outFolder<-"./8_outputs_DESeq/"
 system(paste0("mkdir -p ",outFolder))
 
 # Adding location, cell type, and origin columns 
@@ -129,18 +133,25 @@ load_ref_data<-function(fl="CELLECTA.rds")
 
 
 ## calculate the  correlation function
-cor_with_ref<-function(experiment="RNASeq",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All",ref_cutoff_cor="All")#,excludeNonDErepeat=FALSE)
+cor_with_ref<-function(experiment="RNASeq",threshold="padj",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All",ref_cutoff_cor="All")#,excludeNonDErepeat=FALSE)
 {
   
       
     ref_data<-load_ref_data(fl=experiment)
       
       
-    if(experiment=="CELLECTA")
-    outFolder<-paste0("./8_outputs_DESeq_Plots/DriverMap/","/singlecellcutoff_",singlecell_cutoff_cor,"_refcutoff_",ref_cutoff_scatter,"/")  else outFolder<-paste0("./8_outputs_DESeq_Plots/", experiment,"/singlecellcutoff_",singlecell_cutoff_cor,"_refcutoff_",ref_cutoff_scatter,"/")
+    # if(experiment=="CELLECTA")
+    # outFolder<-paste0(outFolder,"DriverMap/","/singlecellcutoff_",singlecell_cutoff_cor,"_refcutoff_",ref_cutoff_scatter,"/")  else 
+    #   
+    
+    if (threshold!="padj")
+      outFolder<-paste0(outFolder, experiment,"/singlecellcutoff_",singlecell_cutoff_cor,"_refcutoff_",ref_cutoff_cor,"_",threshold,"/")
+    else outFolder<-paste0(outFolder, experiment,"/singlecellcutoff_",singlecell_cutoff_cor,"_refcutoff_",ref_cutoff_cor,"/")
+    
+    
     system(paste0("mkdir -p ",outFolder))
 
-    
+    print(outFolder)
   
     correlation_result<-sapply(unique(res$Cell_type),function(x){
       print(x)
@@ -164,14 +175,14 @@ cor_with_ref<-function(experiment="RNASeq",singlecell_cutoff_cor="DE",ref_cutoff
       if (singlecell_cutoff_cor=="All" & ref_cutoff_cor=="All")
         resJoin<-res_focus %>% inner_join(ref_data)
       
-      if (singlecell_cutoff_cor!="All" & ref_cutoff_cor=="All")
+      if (singlecell_cutoff_cor=="DE" & ref_cutoff_cor=="All")
         resJoin<-res4 %>% inner_join(ref_data)
       
       
-      if (singlecell_cutoff_cor!="All" & ref_cutoff_cor!="All")
+      if (singlecell_cutoff_cor=="DE" & ref_cutoff_cor=="DE")
         resJoin<-res4 %>% inner_join(ref_data2)
       
-      if (singlecell_cutoff_cor=="All" & ref_cutoff_cor!="All")
+      if (singlecell_cutoff_cor=="All" & ref_cutoff_cor=="DE")
         resJoin<-res_focus %>% inner_join(ref_data2)
       
       #}
@@ -182,64 +193,91 @@ cor_with_ref<-function(experiment="RNASeq",singlecell_cutoff_cor="DE",ref_cutoff
         print(nrow(resJoin))
         print(clust2Names[x])
         spearman_all<-cor.test(resJoin$log2FoldChange/resJoin$lfcSE,resJoin$Rt,method="spearman",na.rm=TRUE)
+        #spearman_all<-cor.test(resJoin$log2FoldChange,resJoin$R.Log2FC,method="spearman",na.rm=TRUE)
+        # if (threshold=="pvalue") 
+        #   {
+        #   resJoin<-res_focus %>% inner_join(ref_data)
+        #   resJoin_pvalue<-resJoin %>% filter(pvalue< 0.1 & Rpvalue <0.1)
+        #   spearman_all<-cor.test(resJoin_pvalue$log2FoldChange/resJoin_pvalue$lfcSE,resJoin_pvalue$Rt,method="spearman",na.rm=TRUE)
+        # }
+        #test
+         
+        
         spearman_all_pvalue<-as.numeric(spearman_all$p.value)
         spearman_all_cor<-as.numeric(spearman_all$estimate)
         spearman_all<-c(spearman_all_cor,spearman_all_pvalue)
         
         pearson_all<-cor.test(resJoin$log2FoldChange/resJoin$lfcSE,resJoin$Rt,method="pearson",na.rm=TRUE)
+        # if (threshold=="pvalue")
+        # {
+        #   resJoin<-res_focus %>% inner_join(ref_data)
+        #   resJoin_pvalue<-resJoin %>% filter(pvalue< 0.1 & Rpvalue <0.1)
+        #   pearson_all<-cor.test(resJoin_pvalue$log2FoldChange/resJoin_pvalue$lfcSE,resJoin_pvalue$Rt,method="pearson",na.rm=TRUE)
+        #   
+        # }
+                  
         pearson_all_pvalue<-as.numeric(pearson_all$p.value)
         pearson_all_cor<-as.numeric(pearson_all$estimate)
         pearson_all<-c(pearson_all_cor,pearson_all_pvalue)
         
         
-        # if(ref_cutoff_scatter=="DE")
-        # {
+        if(threshold=="scatter-DE")
+        {
+
+          
+          resJoin<-res_focus %>% inner_join(ref_data)
+          resJoin<-resJoin %>% filter(padj< 0.1 )
+          #resall_celltype <- res4 %>% filter(Cell_type==x)
+          #resJoin <- resall_celltype %>% inner_join(ref_data)
+          cat(table(resJoin$ref_color),sep=":")
+          resJoin$t<-resJoin$log2FoldChange/resJoin$lfcSE
+          p2 <- resJoin %>% arrange(-padj) %>%
+            ggplot(aes(log2FoldChange,R.Log2FC)) +
+            geom_point(color="black")+ #aes(colour = ref_color)) +
+            ##       scale_color_manual(values=resJoin$ref_color)+
+            geom_smooth(method=lm, se=FALSE,linetype = "solid", color="red")+
+            xlab("Myometrium Log2(Fold change) TIL/TNL")+
+            ylab("Peripheral blood Log2(Fold change TIL/TNL")+
+            theme_bw()
+          
+          fname=paste0(outFolder,paste0(clust2Names[x],".png"))
+          ggsave(fname,p2,width=6,height=4.5)
+          
+          
+        }
         #   
-        #   resall_celltype <- res4 %>% filter(Cell_type==x)
-        #   resJoin <- resall_celltype %>% inner_join(ref_data) 
-        #   cat(table(resJoin$ref_color),sep=":")
-        #   resJoin$t<-resJoin$log2FoldChange/resJoin$lfcSE
-        #   p2 <- resJoin %>% arrange(-padj) %>%
-        #     ggplot(aes(Rt,t)) +
-        #     geom_point(color="black")+ #aes(colour = ref_color)) +
-        #     ##       scale_color_manual(values=resJoin$ref_color)+
-        #     geom_smooth(method=lm, se=FALSE,linetype = "dashed", color="black")+
-        #     #scale_color_manual(name="Differentially expressed",values=c("None"="#CCCCCC","Only single cell"="#BDD7EE","Only bulk"="#DD99DD","Single cell and bulk"="#0000EE"))+
-        #     #scale_color_manual(name="Differentially expressed",values=c("#CCCCCC"="#CCCCCC","#BDD7EE"="#BDD7EE","#DD99DD"="#DD99DD","#0000EE"="#0000EE"))+
-        #     theme_bw()
-        #   
-        #   fname=paste0(outFolder,paste0(clust2Names[x],".png"))
-        #   ggsave(fname,p2,width=6,height=4.5)
-        #   
-        # }
-        #   
-        
-        resall_celltype <- res %>% filter(Cell_type==x)
-        resJoin <- resall_celltype %>% inner_join(ref_data) 
-        
-        print(length(!(resJoin$ENTREZID %in% res_rest$ENTREZID)))
-        ## Light gray default no sig.
-        resJoin$ref_color <- "None"          
-        #light blue
-        resJoin$ref_color[resJoin$padj<0.1 ] <- "Only single cell"  
-        #purpule
-        resJoin$ref_color[resJoin$Rpadj<0.1 &  !(resJoin$ENTREZID %in% res_rest$ENTREZID)] <- "Only bulk" 
-        #blue
-        resJoin$ref_color[resJoin$padj<0.1 & resJoin$Rpadj<0.1]="Single cell and bulk" 
-        
-        
-        cat(table(resJoin$ref_color),sep=":")
-        resJoin$t<-resJoin$log2FoldChange/resJoin$lfcSE
-        p2 <- resJoin %>% arrange(-padj) %>%
-          ggplot(aes(Rt,t,color=ref_color)) +
-          geom_point()+ #aes(colour = ref_color)) +
-          geom_smooth(method=lm, se=FALSE,linetype = "dashed", color="black")+
-          scale_color_manual(name="Differentially expressed",values=c("None"="#CCCCCC","Only single cell"="#BDD7EE","Only bulk"="#DD99DD","Single cell and bulk"="#0000EE"))+
-          theme_bw()
-        
-        fname=paste0(outFolder,paste0(clust2Names[x],".png"))
-        ggsave(fname,p2,width=6,height=4.5)
-        #cor_spearman_DE,cor_pearson_DE)
+        else
+        {
+          resall_celltype <- res %>% filter(Cell_type==x)
+          resJoin <- resall_celltype %>% inner_join(ref_data) 
+          
+          print(length(!(resJoin$ENTREZID %in% res_rest$ENTREZID)))
+          ## Light gray default no sig.
+          resJoin$ref_color <- "None"          
+          #light blue
+          resJoin$ref_color[resJoin$padj<0.1 ] <- "Only single cell"  
+          #purpule
+          resJoin$ref_color[resJoin$Rpadj<0.1 &  !(resJoin$ENTREZID %in% res_rest$ENTREZID)] <- "Only bulk" 
+          #blue
+          resJoin$ref_color[resJoin$padj<0.1 & resJoin$Rpadj<0.1]="Single cell and bulk" 
+          
+          
+          cat(table(resJoin$ref_color),sep=":")
+          resJoin$t<-resJoin$log2FoldChange/resJoin$lfcSE
+          p2 <- resJoin %>% arrange(-padj) %>%
+            ggplot(aes(Rt,t,color=ref_color)) +
+            geom_point()+ #aes(colour = ref_color)) +
+            geom_smooth(method=lm, se=FALSE,linetype = "dashed", color="black")+
+            xlab("Reference standardized Log2(Fold change)")+
+            ylab("Standardized log2(Fold change)")+
+            scale_color_manual(name="Differentially expressed",values=c("None"="#CCCCCC","Only single cell"="#BDD7EE","Only bulk"="#DD99DD","Single cell and bulk"="#0000EE"))+
+            theme_bw()
+          
+          fname=paste0(outFolder,paste0(clust2Names[x],".png"))
+          ggsave(fname,p2,width=6,height=4.5)
+          
+        }
+                #cor_spearman_DE,cor_pearson_DE)
         result<-c(spearman_all,pearson_all)
       }
         return (result) 
@@ -270,26 +308,41 @@ cor_with_ref<-function(experiment="RNASeq",singlecell_cutoff_cor="DE",ref_cutoff
 ### call the function to calculate the correlation:   
 
 
-singlecell_cutoff_cor<-"DE"
+# singlecell_cutoff_cor<-"DE"
+# ref_cutoff_scatter<-"All"
+
+
+experiment="myometrium_term_TL-TNL_ALLList"
+#experiment="TL-TNL_21vs28"
+#experiment="TLvsTNL_blood_ENTREZ"
+singlecell_cutoff_cor<-"All"
 ref_cutoff_scatter<-"All"
+ref_cutoff_cor<-"DE"
+
+correlation_result<-cor_with_ref(experiment=experiment,threshold="scatter-DE",singlecell_cutoff_cor=singlecell_cutoff_cor,ref_cutoff_cor=ref_cutoff_cor,ref_cutoff_scatter=ref_cutoff_scatter)
+correlation_result<-cor_with_ref(experiment=experiment,threshold="padj",singlecell_cutoff_cor=singlecell_cutoff_cor,ref_cutoff_cor=ref_cutoff_cor,ref_cutoff_scatter=ref_cutoff_scatter)
 
 
+correlation_result<-cor_with_ref(experiment=experiment,threshold="pvalue",singlecell_cutoff_cor=singlecell_cutoff_cor,ref_cutoff_cor=ref_cutoff_cor,ref_cutoff_scatter=ref_cutoff_scatter)
+correlation_result<-cor_with_ref(experiment=experiment,singlecell_cutoff_cor=singlecell_cutoff_cor,ref_cutoff_cor=ref_cutoff_cor,ref_cutoff_scatter=ref_cutoff_scatter)
 
-correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",singlecell_cutoff_cor="DE",ref_cutoff_scatter="DE")
-correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All")
-correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All")
-correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",singlecell_cutoff_cor="All",ref_cutoff_scatter="All")
-correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",singlecell_cutoff_cor="DE",ref_cutoff_scatter="DE")
-correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="All",ref_cutoff_scatter="All")
-correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="DE",ref_cutoff_scatter="DE")
-correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All",ref_cutoff_cor="All",excludeNonDErepeat=TRUE)
-correlation_result<-cor_with_ref(experiment="TLvsTNL_blood_ENTREZ",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All",ref_cutoff_cor="All") #,excludeNonDErepeat=FALSE)
-correlation_result<-cor_with_ref(experiment="TLvsTNL_blood_ENTREZ",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All",ref_cutoff_cor="All")#,excludeNonDErepeat=FALSE)
-correlation_result<-cor_with_ref(experiment="TLvsTNL_blood_ENTREZ",singlecell_cutoff_cor="All",ref_cutoff_scatter="All",ref_cutoff_cor="All")#,excludeNonDErepeat=FALSE)
-correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="All",ref_cutoff_scatter="All",ref_cutoff_cor="All")#,excludeNonDErepeat=FALSE)
+# correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",singlecell_cutoff_cor="All",ref_cutoff_scatter="All")
+#correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList")
+# correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All")
+# correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",singlecell_cutoff_cor="All",ref_cutoff_scatter="All")
+# correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",singlecell_cutoff_cor="DE",ref_cutoff_scatter="DE")
+# correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="All",ref_cutoff_scatter="All")
+# correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="DE",ref_cutoff_scatter="DE")
+# correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All",ref_cutoff_cor="All",excludeNonDErepeat=TRUE)
+# correlation_result<-cor_with_ref(experiment="TLvsTNL_blood_ENTREZ",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All",ref_cutoff_cor="All") #,excludeNonDErepeat=FALSE)
+# correlation_result<-cor_with_ref(experiment="TLvsTNL_blood_ENTREZ",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All",ref_cutoff_cor="All")#,excludeNonDErepeat=FALSE)
+# correlation_result<-cor_with_ref(experiment="TLvsTNL_blood_ENTREZ",singlecell_cutoff_cor="All",ref_cutoff_scatter="All",ref_cutoff_cor="All")#,excludeNonDErepeat=FALSE)
+# correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_cor="All",ref_cutoff_scatter="All",ref_cutoff_cor="All")#,excludeNonDErepeat=FALSE)
 
+# correlation_result<-cor_with_ref(experiment="TLvsTNL_blood_ENTREZ",singlecell_cutoff_cor="DE",ref_cutoff_scatter="DE")
+# 
+# correlation_result<-cor_with_ref(experiment="TLvsTNL_blood_ENTREZ",singlecell_cutoff_cor="DE",ref_cutoff_scatter="All")
 
-  
   dat2 <- melt(correlation_result[,c("spearman_cor","pearson_cor")])
   dat3 <- melt(correlation_result[,c("spearman_pvalue","pearson_pvalue" )])
 
@@ -313,8 +366,9 @@ correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_co
   dat2<-dat2[order(dat2$clusternumber,decreasing = FALSE),]
   
   #fname=paste0(outFolder,"barplot_cor_v2.pdf")
+  #cutoff_cor_DE_cutoff_scatter_All
   
-  fname=paste0("./8_outputs_DESeq_Plots/", experiment,"/singlecellcutoff_",singlecell_cutoff_cor,"refcutoff_",ref_cutoff_scatter,"/barplot_cor.pdf")
+  fname=paste0(outFolder, experiment,"/singlecellcutoff_",singlecell_cutoff_cor,"_refcutoff_",ref_cutoff_cor,"/barplot_cor.pdf")
   
   pdf(fname,width=12,height=6)
   ggplot(data=dat2, aes(x=cluster, y=value,fill=cluster)) +
@@ -327,6 +381,8 @@ correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_co
     xlab("")+
     ylab("Spearman correlation")
   dev.off() 
+  
+  write.csv(correlation_result,file=paste0(outFolder,experiment,"/singlecellcutoff_",singlecell_cutoff_cor,"_refcutoff_",ref_cutoff_cor,"/correlation_result.csv"))
   
   
 
@@ -356,6 +412,7 @@ correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",singlecell_cutoff_co
 #ref_data<-load_ref_data(fl="myometrium_bulk")
 #ref_data<-load_ref_data(fl="RNASeq.rds")
  
+  
 ref_data<-load_ref_data(fl="myometrium_term_TL-TNL_ALLList")
 
   
@@ -398,7 +455,7 @@ barplot_data<-barplot_data[which(rownames(barplot_data)!="11_NK-cell"),]
 cl<-rownames(barplot_data)
 rownames(barplot_data)<-NULL
 par(mar=c(4, 14 ,4.1 ,2.1))
-outFolder<-"./8_outputs_DESeq_Plots/"
+#outFolder<-"./8_outputs_DESeq_Plots/"
 
 fname=paste0(outFolder,"comparison_with_bulk.pdf");
 pdf(fname,width=3,height=4)
@@ -426,7 +483,7 @@ barplot_data<-barplot_data[order(barplot_data[,"single_cell"]),]
 cl<-rownames(barplot_data)
 rownames(barplot_data)<-NULL
 par(mar=c(4, 14 ,4.1 ,2.1))
-outFolder<-"./8_outputs_DESeq_Plots/"
+#outFolder<-"./8_outputs_DESeq_Plots/"
 
 fname=paste0(outFolder,"comparison_with_bulk.pdf");
 pdf(fname,width=10,height=6)
@@ -452,14 +509,23 @@ values=c("None"="#CCCCCC","Only single cell"="#BDD7EE","Only bulk"="#DD99DD","Si
 # to do: meta plot and boxplot
 ############################################################
 ref_data<-load_ref_data(fl="RNASeq.rds")
-outFolder<-"./8_outputs_DESeq_Plots/RNASeq/"
-correlation_result<-cor_with_ref("RNASeq")
+#outFolder<-"./8_outputs_DESeq_Plots/RNASeq/"
+#correlation_result<-cor_with_ref("RNASeq")
 
 
-ref_data<-load_ref_data(fl="CELLECTA.rds")
-outFolder<-"./8_outputs_DESeq_Plots/DriverMap/"
+#ref_data<-load_ref_data(fl="CELLECTA.rds")
+#outFolder<-"./8_outputs_DESeq_Plots/DriverMap/"
 # correlation_result<-cor_with_ref("CELLECTA")
 
+
+experiment="myometrium_term_TL-TNL_ALLList"
+#experiment="TL-TNL_21vs28"
+#experiment="TLvsTNL_blood_ENTREZ"
+
+
+
+#ref_data<-load_ref_data(fl="RNASeq.rds")
+ref_data<-load_ref_data(fl="TLvsTNL_blood_ENTREZ")
 intersected_genes<-c()
 for (x in unique(res$Cell_type))
 {
@@ -475,3 +541,173 @@ for (x in unique(res$Cell_type))
 write.csv(intersected_genes,file=paste0(outFolder,"intersected_genes.csv"))
 
 intersected_genes<-read.csv(paste0(outFolder,"intersected_genes.csv"),stringsAsFactors = FALSE)
+
+
+res4 <- res %>% filter(padj<0.1 & !is.na(padj))
+ref_data<-ref_data %>% filter(Rpadj<0.1 & !is.na(Rpadj) )
+resJoin <- res4 %>% inner_join(ref_data) 
+clust2Names1<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+names(clust2Names1)<-c(0:23)
+resJoin$Cell_type<-clust2Names1[resJoin$Cell_type]
+resJoin<-resJoin %>% select(Cell_type,Gene=gene_name,Log2FC=log2FoldChange,lfcSE,padj)
+write.csv(resJoin,file=paste0(outFolder,"overlap-DEG-singlecell_peripheral.csv"))
+
+
+
+#########################################################
+# binomial test
+#########################################################
+
+cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D",
+                  "#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","#2C3E18","#745B48",
+                  "#AA5485","#4E747A","#C59A89","#C9C76F")   
+names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte",
+                         "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast",
+                         "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+
+cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D",
+                  "#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","#2C3E18","#745B48",
+                  "#AA5485","#4E747A","#C59A89","#C9C76F")   
+names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte",
+                         "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast",
+                         "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+
+names(cluster.Colors)<-paste0(c(0:23),"_",names(cluster.Colors))
+clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+clust2Names<-paste0(c(0:23),"_",clust2Names)
+names(clust2Names)<-c(0:23)
+
+
+res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
+
+res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
+res <- res %>% filter(!is.na(pvalue))
+eg = bitr(res$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
+names(eg)[1]="gene_name"
+head(eg)
+e2g <- eg$gene_name
+names(e2g) <- eg$ENTREZID
+
+#ENTREZID
+res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
+res$Cell_type<-clust2Names[res$Cell_type]
+
+
+
+resDE<-res %>% filter(padj<0.1 & !is.na(padj)) #single cell fdr 0.1
+total<-table(resDE$Cell_type)
+
+res_up<-resDE%>%filter(log2FoldChange>0)
+upregulated<-rep(0,length(total))
+names(upregulated)<-names(total)
+upregulated[names(table(res_up$Cell_type))]<-table(res_up$Cell_type)
+
+
+sc <- read_rds("4_harmony/sc.NormByLibrary.Harmony.StringentFiltering.res0.8.rds")
+md <- read_rds("./4_harmony_cellClass_PBMC/sc.NormByLocation.ref.Anchors.rds") %>%
+  as.data.frame %>%
+  rownames_to_column("BARCODES") %>%
+  dplyr::select(BARCODES,scLabor_ID=predicted.celltype.l2,scLabor_Score=predicted.celltype.l2.score)
+md <- sc@meta.data %>% rownames_to_column("BARCODES") %>%
+  left_join(md) 
+identical(md$BARCODES,rownames(sc@meta.data))
+sc@meta.data$cluster_name <- clust2Names[sc@meta.data$seurat_clusters]
+cell_counts<-table(sc$cluster_name)
+
+
+
+binom.test.res<-c()
+
+for( x in unique(resDE$Cell_type))
+{
+  
+  btest<-binom.test(upregulated[x],total[x],0.5)
+  if(is.na(upregulated[x]))
+    upregulated[x]<-0
+  rb<-as.numeric(c(cell_counts[x],upregulated[x], (total[x]-upregulated[x]),total[x],btest$p.value))
+  binom.test.res<-rbind(binom.test.res,rb)
+  print(x)
+  print(btest$p.value)
+}
+
+rownames(binom.test.res)<-unique(resDE$Cell_type)
+colnames(binom.test.res)<-c("Cell-counts","Up-regulated","Down-regulated","Total","P-value")
+binom.test.res<-as.data.frame(binom.test.res)
+binom.test.res$padj<-p.adjust(binom.test.res$`P-value`,"fdr")
+binom.test.res<-binom.test.res[order(binom.test.res[,"padj"],decreasing = FALSE),]
+
+write.csv(binom.test.res,file="8_outputs_DESeq_batch_library_Plots/binom.test.res.csv")
+
+
+
+##################################
+
+outFolder<-"./8_outputs_DESeq_batch_library_Plots/"
+#outFolder<-"./8_outputs_DESeq/"
+system(paste0("mkdir -p ",outFolder))
+
+
+genes<-list.files(paste0(outFolder,"meta_plots_selected"))
+genes<-unlist(str_split(genes,".pdf"))[seq(1,2*length(genes),by=2)]
+
+# Some more details on genes related to meta plots
+
+cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D",
+                  "#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","#2C3E18","#745B48",
+                  "#AA5485","#4E747A","#C59A89","#C9C76F")   
+names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte",
+                         "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast",
+                         "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+
+cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D",
+                  "#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","#2C3E18","#745B48",
+                  "#AA5485","#4E747A","#C59A89","#C9C76F")   
+names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte",
+                         "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast",
+                         "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+
+names(cluster.Colors)<-paste0(c(0:23),"_",names(cluster.Colors))
+clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+clust2Names<-paste0(c(0:23),"_",clust2Names)
+names(clust2Names)<-c(0:23)
+
+
+
+# load DE genes across cell types
+
+#res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
+
+
+# Adding location, cell type, and origin columns 
+res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
+res <- res %>% filter(!is.na(pvalue))
+eg = bitr(res$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
+names(eg)[1]="gene_name"
+head(eg)
+e2g <- eg$gene_name
+names(e2g) <- eg$ENTREZID
+
+res$Cell_type<-clust2Names[res$Cell_type]
+#ENTREZID
+
+res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
+res<-res %>% filter(pvalue<0.1)
+
+res<-res %>% filter(gene_name %in% genes)
+res<-res %>% select(ENTREZID,gene_name , Cell_type, log2FC.singlecell=log2FoldChange,pvalue.singlecell=pvalue, padj.singlecell= padj)
+
+
+
+ref_data_bulk<-load_ref_data(fl="myometrium_term_TL-TNL_ALLList")
+
+ref_data_bulk<-ref_data_bulk %>% select(ENTREZID ,log2FC.bulk=R.Log2FC,pvalue.bulk=Rpvalue, padj.bulk= Rpadj)
+
+ref_data_blood<-load_ref_data(fl="TLvsTNL_blood_ENTREZ")
+ref_data_blood<-ref_data_blood %>% select(ENTREZID ,log2FC.blood=R.Log2FC,pvalue.blood=Rpvalue, padj.blood= Rpadj)
+
+resjoin<-res %>% inner_join(ref_data_bulk)%>% inner_join (ref_data_blood)
+res_metaplot_genes<-resjoin %>% arrange(gene_name,-log2FC.singlecell) %>% group_by(gene_name)
+
+res_metaplot_genes<-res_metaplot_genes %>% select(ENTREZID,gene_name,Cell_type,pvalue.singlecell,pvalue.bulk,pvalue.blood, padj.singlecell, padj.bulk,padj.blood, log2FC.singlecell,log2FC.bulk, log2FC.blood)
+write.csv(res_metaplot_genes,file=paste0(outFolder,"res_metaplot_genes.csv"))

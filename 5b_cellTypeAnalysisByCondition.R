@@ -80,6 +80,8 @@ ccdiff_filtered$seurat_clusters
 aa$cluster_name[which(aa$cluster_name %in% ccdiff_filtered$seurat_clusters )]<-paste(aa$cluster_name," *",sep="")[which(aa$cluster_name %in% ccdiff_filtered$seurat_clusters )]
 
 
+# figure 3c
+
 fname=paste0(outFolder,"/UMAP_LocationCondition.Barplot.pdf");
 pdf(fname,width=10,height=6)
 p2 <- ggplot(aa,aes(x=reorder(cluster_name,-seurat_clusters),fill=Condition)) +

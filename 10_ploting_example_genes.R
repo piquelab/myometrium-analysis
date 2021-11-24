@@ -12,14 +12,14 @@ library(dplyr)
 library(stringr)
 
 
-outFolder <- paste0("./8_example_genes_Plots/")
+outFolder <- paste0("./8_example_genes_bathc_corrected_Plots/")
 system(paste0("mkdir -p ",outFolder))
 
 
 ##loading all DE genes FDR < 0.1
 #res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
-res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
-
+#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
 
 # Adding location, cell type, and origin columns 
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
@@ -44,7 +44,7 @@ res$Cell_type<-clust2Names[res$Cell_type]
 
 
 #covid 
-sc <- read_rds("/wsu/home/fd/fd43/fd4387/scilab/labor2/covid-analysis/2020-10-02/6_harmony_rename_res0.8_plots/SeuratObject.rds")
+#sc <- read_rds("/wsu/home/fd/fd43/fd4387/scilab/labor2/covid-analysis/2020-10-02/6_harmony_rename_res0.8_plots/SeuratObject.rds")
 
 
 
@@ -59,7 +59,7 @@ cat(cmd,"\n")
 ## Check 0 or 1-based coordinates. 
 
 aux <- data.table::fread(cmd=cmd) %>% mutate(TSS=ifelse(V7=="+",V4,V5)) %>%
-  select(Chr=V1,Min=V4,Max=V5,kbid=V9,TSS,Strand=V7,Type=V10,gene_name=V11) 
+  dplyr::select(Chr=V1,Min=V4,Max=V5,kbid=V9,TSS,Strand=V7,Type=V10,gene_name=V11) 
 ##anno <- tibble(kbid=rownames(sc)) %>% mutate(ensgene=gsub("\\..*","",kbid)) %>% left_join(grch38)
 
 anno <- tibble(kbid=rownames(sc),rs=rowSums(sc@assays$RNA@data)) %>% filter(rs>0) %>% left_join(aux) %>%
@@ -212,7 +212,27 @@ dev.off()
 #Forest Plot 
 ################################################
 
-res_select<-res %>% group_by(Cell_type) %>% filter (padj <=0.01 & abs(log2FoldChange)>=2)
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
+
+# Adding location, cell type, and origin columns 
+res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
+res <- res %>% filter(!is.na(pvalue))
+res<-res[order(abs(res$log2FoldChange), abs(res$baseMean),decreasing = TRUE),]
+
+
+clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+names(clust2Names)<-c(0:23)
+res$Cell_type<-clust2Names[res$Cell_type]
+
+
+
+# current version
+res_select<-res %>% group_by(Cell_type) %>% filter (padj <=0.05 & abs(log2FoldChange)>=2)
+
+# test this
+#res_select<-res %>% group_by(Cell_type) %>% filter (padj <=0.05 & abs(log2FoldChange)>=1)
+
+
 DE_number_per_celltype<-tapply(res_select$padj ,factor(res_select$Cell_type),length )
 
 res_select$DE_number_per_celltype<-DE_number_per_celltype[res_select$Cell_type]
@@ -244,9 +264,12 @@ p<-res_select %>%
 
 g <- ggplot_gtable(ggplot_build(p))
 strip_both <- which(grepl('strip-', g$layout$name))
-fills <- c("Stromal-1"="#DF7D99"  ,"Monocyte"="#2BA3D3","Endothelial-1"="#FFC000","Stromal-2"="#ED4315","Macrophage-3"="#72C6C8"  ,"Macrophage-1"="#4E65A6",
-           "Decidual"="#D14357", "Macrophage-2"="#838EDF",
-           "Endothelial-2"="#E4652C" ,"LED"="#D5438E" )
+# fills <- c("Stromal-1"="#DF7D99"  ,"Monocyte"="#2BA3D3","Endothelial-1"="#FFC000","Stromal-2"="#ED4315","Macrophage-3"="#72C6C8"  ,"Macrophage-1"="#4E65A6",
+#            "Decidual"="#D14357", "Macrophage-2"="#838EDF",
+#            "Endothelial-2"="#E4652C" ,"LED"="#D5438E" )
+fills <- c("Stromal-1"="#DF7D99"  ,"Endothelial-1"="#FFC000","Macrophage-3"="#72C6C8","Monocyte"="#2BA3D3","Macrophage-1"="#4E65A6","Endothelial-2"="#E4652C" ,"Stromal-2"="#ED4315"  ,
+           "Decidual"="#D14357", "Macrophage-2"="#838EDF")
+
 k <- 1
 for (i in strip_both) {
   j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
@@ -255,3 +278,127 @@ for (i in strip_both) {
   k <- k+1
 }
 ggsave(paste0(outFolder,"forestPlot_DEgenes_cname_v5.pdf"),g,width=10,height=30)
+
+
+
+## forestPlot 
+#coloring
+
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
+
+# Adding location, cell type, and origin columns 
+res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
+res <- res %>% filter(!is.na(pvalue))
+res<-res[order(abs(res$log2FoldChange), abs(res$baseMean),decreasing = TRUE),]
+
+
+clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+names(clust2Names)<-c(0:23)
+res$Cell_type<-clust2Names[res$Cell_type]
+res_select<-res %>% filter (padj <0.1 & Cell_type=="Smooth muscle cells-1")
+res_select$padj[res_select$padj<1E-6]<- 1E-6
+
+
+## forestPlot 
+#coloring
+
+
+
+
+p<-res_select %>% 
+  ggplot(aes(x=reorder(gene_name,(log2FoldChange),color="black"),y=log2FoldChange),color="black") +
+  geom_errorbar(aes(ymax = log2FoldChange + 1.96*lfcSE, ymin = log2FoldChange - 1.96*lfcSE),size=1.2,color="black",alpha=1,width=0,position=position_dodge(width=0.2)) +
+  geom_point(aes(size=padj),position=position_dodge(width=0.2),color="#111111") +
+  ##scale_color_manual(guide = guide_legend(reverse = TRUE) ) +
+  scale_size("q-values", trans="log10", range=c(7, 1),limits=c(1E-10,1), breaks=c(1E-12,1E-6,0.001,0.01,0.1)) +
+  ## scale_alpha_manual(values=c(0.3, 1.0),guide=FALSE) +
+  geom_hline(yintercept=0,lty=2) + 
+  xlab("Gene") + ylab(expression(log[2](Fold~Change))) +
+  theme_bw() +
+  theme(strip.text.y = element_text(angle = 0,hjust=0,vjust=0.5),strip.background=element_rect(fill="white",color="white")) +
+  coord_flip() + 
+  #theme(strip.background =element_rect(fill=cluster.Colors))+
+  facet_grid(Cell_type ~ . ,scales = "free_y",space="free") 
+
+g <- ggplot_gtable(ggplot_build(p))
+strip_both <- which(grepl('strip-', g$layout$name))
+# fills <- c("Stromal-1"="#DF7D99"  ,"Monocyte"="#2BA3D3","Endothelial-1"="#FFC000","Stromal-2"="#ED4315","Macrophage-3"="#72C6C8"  ,"Macrophage-1"="#4E65A6",
+#            "Decidual"="#D14357", "Macrophage-2"="#838EDF",
+#            "Endothelial-2"="#E4652C" ,"LED"="#D5438E" )
+# fills <- c("Stromal-1"="#DF7D99"  ,"Endothelial-1"="#FFC000","Macrophage-3"="#72C6C8","Monocyte"="#2BA3D3","Macrophage-1"="#4E65A6","Endothelial-2"="#E4652C" ,"Stromal-2"="#ED4315"  ,
+#            "Decidual"="#D14357", "Macrophage-2"="#838EDF")
+
+k <- 1
+for (i in strip_both) {
+  j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
+  g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$col<-fills[k]
+  g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$lwd=4
+  k <- k+1
+}
+ggsave(paste0(outFolder,"forestPlot_SMC-1.pdf"),g,width=10,height=30)
+
+
+
+
+
+
+
+###############################################################################
+
+#res_smc1<-res %>% filter ( Cell_type=="Smooth muscle cells-1" & !is.na(padj))
+
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
+
+# Adding location, cell type, and origin columns 
+res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
+res <- res %>% filter(!is.na(pvalue))
+res<-res[order(abs(res$log2FoldChange), abs(res$baseMean),decreasing = TRUE),]
+
+
+clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+names(clust2Names)<-c(0:23)
+res$Cell_type<-clust2Names[res$Cell_type]
+
+res_select<-res %>% filter (padj <0.05 & Cell_type=="Smooth muscle cells-1" & abs(log2FoldChange)>1)
+res_select$padj[res_select$padj<1E-6]<- 1E-6
+
+
+## forestPlot 
+#coloring
+
+
+
+
+p<-res_select %>% 
+  ggplot(aes(x=reorder(gene_name,(log2FoldChange),color="black"),y=log2FoldChange),color="black") +
+  geom_errorbar(aes(ymax = log2FoldChange + 1.96*lfcSE, ymin = log2FoldChange - 1.96*lfcSE),size=1.2,color="black",alpha=1,width=0,position=position_dodge(width=0.2)) +
+  geom_point(aes(size=padj),position=position_dodge(width=0.2),color="#111111") +
+  ##scale_color_manual(guide = guide_legend(reverse = TRUE) ) +
+  scale_size("q-values", trans="log10", range=c(7, 1),limits=c(1E-10,1), breaks=c(1E-12,1E-6,0.001,0.01,0.1)) +
+  ## scale_alpha_manual(values=c(0.3, 1.0),guide=FALSE) +
+  geom_hline(yintercept=0,lty=2) + 
+  xlab("Gene") + ylab(expression(log[2](Fold~Change))) +
+  theme_bw() +
+  theme(strip.text.y = element_text(angle = 0,hjust=0,vjust=0.5),strip.background=element_rect(fill="white",color="white")) +
+  coord_flip() + 
+  #theme(strip.background =element_rect(fill=cluster.Colors))+
+  facet_grid(Cell_type ~ . ,scales = "free_y",space="free") 
+
+g <- ggplot_gtable(ggplot_build(p))
+strip_both <- which(grepl('strip-', g$layout$name))
+# fills <- c("Stromal-1"="#DF7D99"  ,"Monocyte"="#2BA3D3","Endothelial-1"="#FFC000","Stromal-2"="#ED4315","Macrophage-3"="#72C6C8"  ,"Macrophage-1"="#4E65A6",
+#            "Decidual"="#D14357", "Macrophage-2"="#838EDF",
+#            "Endothelial-2"="#E4652C" ,"LED"="#D5438E" )
+# fills <- c("Stromal-1"="#DF7D99"  ,"Endothelial-1"="#FFC000","Macrophage-3"="#72C6C8","Monocyte"="#2BA3D3","Macrophage-1"="#4E65A6","Endothelial-2"="#E4652C" ,"Stromal-2"="#ED4315"  ,
+#            "Decidual"="#D14357", "Macrophage-2"="#838EDF")
+
+# k <- 1
+# for (i in strip_both) {
+#   j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
+#   g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$col<-fills[k]
+#   g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$lwd=4
+#   k <- k+1
+# }
+ggsave(paste0(outFolder,"forestPlot_padj-logFC-SMC-1.pdf"),g,width=9,height=8)
+
+

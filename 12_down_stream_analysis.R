@@ -14,11 +14,13 @@ library(ashr)
 library(mashr)
 library(pheatmap)
 
-outFolder <- paste0("12_downstream_analysis/")
+#outFolder <- paste0("12_downstream_analysis/")
+outFolder <- paste0("12_downstream_analysis_batch_corrected/")
 system(paste0("mkdir -p ",outFolder))
 
 
-res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/SIG.combined.2021-10-18.tsv")
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
 res <- res %>% filter(!is.na(pvalue))
 clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
@@ -47,7 +49,7 @@ rownames(res_df)<-unique(res$gene_name)
 cell_types<-unique(res$Cell_type)
 for (i in 1:length(cell_types))
 {
- res_celltype<-res %>% filter(Cell_type %in% cell_types[i]) %>%select(gene_name)
+ res_celltype<-res %>% filter(Cell_type %in% cell_types[i]) %>% dplyr::select(gene_name)
  gn<-res_celltype$gene_name
  res_df[gn,cell_types[i]]<-1
 }
@@ -60,6 +62,12 @@ fig0
 dev.off()
 
 
+m2 <- mt[,comb_size(mt)>10]
+fig0 <- UpSet(m2, set_order=colnames(res_df),comb_order=order(comb_size(m2)))#sets.bar.color = cluster.Colors[colnames(res_df)]
+pdf(file=paste0(outFolder,"upsetplot_comb_size10.pdf"))#,width=45,height=20)# or other device
+fig0
+dev.off()
+
 
 ##############
 
@@ -71,7 +79,8 @@ set.seed(1)
 #load data 
 ########################################################################
 #res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
-res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
 
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
 res <- res %>% filter(!is.na(pvalue))
@@ -92,28 +101,56 @@ res$Cell_type<-clust2Names[res$Cell_type]
 
 
 
-outFolder<-"12_downstream_analysis/"
-
+#outFolder<-"12_downstream_analysis/"
+outFolder<-"12_downstream_analysis_batch_corrected/"
 # load lfsr_m.c and m.c from mashr result
 lfsr_m.c<-read_rds(paste0(outFolder,"lfsr_m.c.rds"))
 m.c<-read_rds(paste0(outFolder,"m.c.rds"))
 
 
 # genes for meta plot
+celltype<-"1_Macrophage-2" 
+celltype<-"4_Monocyte"  
+celltype<-"8_LED" 
+celltype<-"7_CD8_T-cell"
+celltype<-"5_CD4_T-cell" 
+celltype<-"12_Smooth muscle cells-1"
+celltype<-"6_Decidual"  
+celltype<-"0_Stromal-1" 
+celltype<-"15_Endothelial-2" 
+otherDEGs<-res$gene_name [which(res$Cell_type !=celltype)]
+res_specific<-res %>% filter (Cell_type==celltype & !gene_name %in% otherDEGs)
+res_specific<-res_specific %>% arrange(-log2FoldChange)
+#res_specific$gene_name[1:20]
+sample_genes<-res$kbid[which(res$gene_name %in%  res_specific$gene_name[1:20] )]
 
-mytop<-rep(FALSE,length(rownames(lfsr_m.c)))
-names(mytop)<-rownames(lfsr_m.c)
-#sample_genes<-res$kbid[which(res$gene_name %in% c("TCIRG1","ADAM15","MAP1B","PNPLA2","PLEKHO1","IFI16","HTRA1","FAM129A","CD52","EFHD2","CD82","ACOT7","WDR1","RRP9","OXTR","COX2","CAM","Cx43","GJA1","PTGES2","SCD")) ]
-#sample_genes<-res$kbid[which(res$gene_name == "ACTA2")]
+
+
+#sample_genes<-res$kbid[which(res$gene_name %in%  smc1[1:50]) ]
+sample_genes<-res$kbid[which(res$gene_name %in%  smc2[1:50]) ]
+
+sample_genes<-res$kbid[which(res$gene_name %in%  stromal1[1:50]) ]
+
+sample_genes<-res$kbid[which(res$gene_name %in%  mac1[1:50]) ]
+
+
+sample_genes<-res$kbid[which(res$gene_name %in% c("APMAP","S100A10","ADAM15","PLEKHO1","PTGES2","SCD","TCIRG1","CD52","WDR1")) ]
+sample_genes<-res$kbid[which(res$gene_name %in% c("TCIRG1","ADAM15","MAP1B","PNPLA2","PLEKHO1","IFI16","HTRA1","FAM129A","CD52","EFHD2","CD82","ACOT7","WDR1","RRP9","OXTR","COX2","CAM","Cx43","GJA1","PTGES2","SCD")) ]
+sample_genes<-res$kbid[which(res$gene_name == "ACTA2")]
 #sample_genes<-res$kbid[which(res$gene_name %in% c("LMOD1" , "GUCY1A1",  "GUCY1B1" ))]
-sample_genes<-res$kbid[which(res$gene_name %in% c("COL8A1","CSRP2","DCBLD2","DENR","	MFSD1","NDRG4","SENCR","SMCN1","SPON1","UNC45A","YIPF5"))]
+#sample_genes<-res$kbid[which(res$gene_name %in% c("COL8A1","CSRP2","DCBLD2","DENR","	MFSD1","NDRG4","SENCR","SMCN1","SPON1","UNC45A","YIPF5"))]
 # intersected_genes<-read.csv(paste0(outFolder2,"intersected_genes.csv"),stringsAsFactors = FALSE)
-# #sample_genes<-res$kbid[which(res$gene_name %in% c("OXTR","COX2","CAM","Cx43","GJA1","PTGES2")) ]
-# sample_genes<-res$kbid[which(res$gene_name %in% hub_scores$gene_name[1:50])]
-# sample_genes<-res$kbid[which(res$gene_name %in% c("TCIRG1","ADAM15","MAP1B","PNPLA2","PLEKHO1","IFI16","HTRA1","FAM129A","CD52","EFHD2","CD82","ACOT7","WDR1","RRP9","OXTR","COX2","CAM","Cx43","GJA1","PTGES2","SCD")) ]
-# sample_genes<-res$kbid[which(res$gene_name %in% c("MMP9","STOM","METTL9","MSR1","MCEMP1","TFDP1","TSTA3","GMPR","HK1","FOXO3","P2RX7","MYOF","ABCG1","OLR1")) ]
-# sample_genes<-res$kbid[which(res$gene_name %in% unique(intersected_genes$gene_name)) ]
-# sample_genes<-res$kbid[which(res$gene_name %in% c("PRKG1", "PDE5A","PLN")) ]
+
+
+#intersected_genes<-read.csv(paste0("8_outputs_DESeq_batch_library_Plots/intersected_genes.csv"),stringsAsFactors = FALSE)
+#sample_genes<-res$kbid[which(res$gene_name %in% unique(intersected_genes$gene_name)) ]
+# unique(intersected_genes$gene_name)
+
+#sample_genes<-res$kbid[which(res$gene_name %in% c("OXTR","COX2","CAM","Cx43","GJA1","PTGES2")) ]
+sample_genes<-res$kbid[which(res$gene_name %in% hub_scores$gene_name[1:60])]
+# sample_genes<-res$kbid[which(res$gene_name %in% c("MAP1B","PNPLA2","IFI16","HTRA1","FAM129A","EFHD2","CD82","ACOT7","RRP9","OXTR","COX2","CAM","Cx43","GJA1")) ]
+#sample_genes<-res$kbid[which(res$gene_name %in% c("MMP9","STOM","METTL9","MSR1","MCEMP1","TFDP1","TSTA3","GMPR","HK1","FOXO3","P2RX7","MYOF","ABCG1","OLR1")) ]
+#sample_genes<-res$kbid[which(res$gene_name %in% c("PRKG1", "PDE5A","PLN")) ]
 # which(res_select$gene_name %in% c("COL8A1","CSRP2","DCBLD2","DENR","	MFSD1","NDRG4","SENCR","SMCN1","SPON1","UNC45A","YIPF5") )
 
 # numsig.rel <- rowSums(lfsr_m.c<0.9)
@@ -135,7 +172,7 @@ sample_genes<-res$kbid[which(res$gene_name %in% c("COL8A1","CSRP2","DCBLD2","DEN
 
 
 
-mytop[which(names(mytop) %in%sample_genes)]<-TRUE
+
 
 # meta plot
 plot_func<-function(m.c,mytop,k=1,outFolder)
@@ -145,9 +182,10 @@ plot_func<-function(m.c,mytop,k=1,outFolder)
     par(mar=c(2, 1 ,4 ,3))
     i<-which(mytop)[k]
     plot.title<-res$gene_name[which(res$kbid==names(i))[1]]
+    print(plot.title)
     system(paste0("mkdir -p ",outFolder))
     fname=paste0(outFolder,plot.title,".pdf");
-    pdf(fname,width=7,height=7)
+    pdf(fname,width=10,height=7)
     
     print(plot.title)
     
@@ -161,10 +199,50 @@ plot_func<-function(m.c,mytop,k=1,outFolder)
   
 }
 
+mytop<-rep(FALSE,length(rownames(lfsr_m.c)))
+names(mytop)<-rownames(lfsr_m.c)
+mytop[which(names(mytop) %in% unique(sample_genes))]<-TRUE
 
-system(paste0("mkdir -p ",paste0(outFolder,"smc_genes/")))
+# system(paste0("mkdir -p ",paste0(outFolder,"smc_genes/")))
+# # call to generate metaplots for all genes TRUE in mytop:
+# plot_func(m.c,mytop,outFolder=paste0(outFolder,"smc_genes/"))
+
+
+system(paste0("mkdir -p ",paste0(outFolder,celltype,"/")))
 # call to generate metaplots for all genes TRUE in mytop:
-plot_func(m.c,mytop,outFolder=paste0(outFolder,"smc_genes/"))
+plot_func(m.c,mytop,outFolder=paste0(outFolder,celltype,"/"))
+
+
+#system(paste0("mkdir -p ",paste0(outFolder,"sample_genes/")))
+system(paste0("mkdir -p ",paste0(outFolder,"12_Smooth_muscle_cells-1_/")))
+# call to generate metaplots for all genes TRUE in mytop:
+plot_func(m.c,mytop,outFolder=paste0(outFolder,"12_Smooth_muscle_cells-1_/"))
+
+
+system(paste0("mkdir -p ",paste0(outFolder,"smc1/")))
+# call to generate metaplots for all genes TRUE in mytop:
+plot_func(m.c,mytop,outFolder=paste0(outFolder,"smc1/"))
+
+
+system(paste0("mkdir -p ",paste0(outFolder,"stromal1/")))
+# call to generate metaplots for all genes TRUE in mytop:
+plot_func(m.c,mytop,outFolder=paste0(outFolder,"stromal1/"))
+
+system(paste0("mkdir -p ",paste0(outFolder,"mac1/")))
+# call to generate metaplots for all genes TRUE in mytop:
+plot_func(m.c,mytop,outFolder=paste0(outFolder,"mac1/"))
+
+
+
+system(paste0("mkdir -p ",paste0(outFolder,"smc2/")))
+# call to generate metaplots for all genes TRUE in mytop:
+plot_func(m.c,mytop,outFolder=paste0(outFolder,"smc2/"))
+
+
+
+system(paste0("mkdir -p ",paste0(outFolder,"main_figure_genes/")))
+# call to generate metaplots for all genes TRUE in mytop:
+plot_func(m.c,mytop,outFolder=paste0(outFolder,"main_figure_genes/"))
 
 
 
@@ -249,6 +327,7 @@ experiment<-"TLvsTNL_blood_ENTREZ"
 
 
 ref_data<-load_ref_data(fl=experiment) 
+ref_data2<-load_ref_data(fl="myometrium_term_TL-TNL_ALLList") 
 colnames(ref_data)[which(colnames(ref_data)=="R.gene_name")]<-"gene_name"
 ref_data2 <- ref_data %>% filter(Rpadj<0.1 &  !is.na(R.Log2FC) & !is.na(Rpadj))
 

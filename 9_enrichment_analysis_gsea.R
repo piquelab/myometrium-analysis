@@ -12,14 +12,16 @@ library(org.Hs.eg.db)
 library(ReactomePA)
 
 
-outFolder <- paste0("./9_enrichment_Plots/")
+#outFolder <- paste0("./9_enrichment_Plots/")
+outFolder <- paste0("./9_enrichment_batch_corrected_Plots/")
 system(paste0("mkdir -p ",outFolder))
 
 
 ########################################################
 # load single cell data 
 ########################################################
-res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+#res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
 
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
 
@@ -40,7 +42,7 @@ names(eg)[1]="gene_name"
 head(eg)
 e2g <- eg$gene_name
 names(e2g) <- eg$ENTREZID
-res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
+res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID) & !is.na(padj))
 
 ####################################################################
 # load reference data 
@@ -127,9 +129,9 @@ load_ref_data<-function(fl="CELLECTA.rds")
 # gene set enrichment analysis
 #############################################################################
 # reference data 
-experiment<-"myometrium_term_TL-TNL_ALLList"
+#experiment<-"myometrium_term_TL-TNL_ALLList"
 #experiment<-"TL-TNL_21vs28"
-#experiment<-"TLvsTNL_blood_ENTREZ"
+experiment<-"TLvsTNL_blood_ENTREZ"
 ref_data<-load_ref_data(fl=experiment) 
 
 
@@ -139,6 +141,7 @@ resDE<-resDE%>% dplyr::select(Cell_type, ENTREZID)
 colnames(resDE)<-c("cellMarker","geneID")
 cell_markers <- resDE %>% group_by(cellMarker) %>% summarize(geneID=list(unique(geneID)))
 
+cell_markers<-resDE
 
 genelist_origin <- -log10(ref_data$Rpvalue)
 names(genelist_origin) <- ref_data$ENTREZID
@@ -154,16 +157,24 @@ gene <- names(genelist)[genelist > 2]
 
 
 
+# myometrium_rerm_TL_TNL_ALLList: figure 6D
+
+# RNASeq: figure 8c
 system(paste0("mkdir -p ",outFolder,experiment))
 
 GSEA.res <- GSEA(genelist, TERM2GENE=cell_markers,minGSSize=5, maxGSSize=3000,eps =0,pvalueCutoff = 1)
+
 res_df<-GSEA.res@result
+res_df<- res_df %>% filter(p.adjust < 0.1 )
+
+# figure 7D
+
 fname<-paste0(outFolder,experiment,"/GSEA-cellmarker.png")
 p1<-ggplot(res_df, # you can replace the numbers to the row number of pathway of your interest
            aes(x = enrichmentScore, y = Description)) + 
     geom_point(aes(size = enrichmentScore, color = p.adjust)) +
     theme_bw(base_size = 11) +
-    scale_color_gradient(limits=c(0,1),low = "red",  high = "blue", space = "Lab" )+
+    scale_color_gradient(low = "red",  high = "blue", space = "Lab" )+
     theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=10)) +
     labs(size="enrichmentScore",color="p.adjust") + #x="",y="GO term"
     ylab(NULL) 
@@ -212,7 +223,7 @@ write.csv(res_df,file=paste0(outFolder,experiment,"/gsea_df.csv"))
 #########################################################
 # binomial test
 #########################################################
-resDE<-res %>% filter(padj<0.1 ) #single cell fdr 0.1
+resDE<-res %>% filter(padj<0.1 & !is.na(padj)) #single cell fdr 0.1
 total<-table(resDE$Cell_type)
 
 res_up<-resDE%>%filter(log2FoldChange>0)
@@ -229,7 +240,7 @@ md <- read_rds("./4_harmony_cellClass_PBMC/sc.NormByLocation.ref.Anchors.rds") %
 md <- sc@meta.data %>% rownames_to_column("BARCODES") %>%
     left_join(md) 
 identical(md$BARCODES,rownames(sc@meta.data))
-sc@meta.data$cluster_name <- clust2Name[sc@meta.data$seurat_clusters]
+sc@meta.data$cluster_name <- clust2Names[sc@meta.data$seurat_clusters]
 cell_counts<-table(sc$cluster_name)
 
 
@@ -254,7 +265,8 @@ binom.test.res<-as.data.frame(binom.test.res)
 binom.test.res$padj<-p.adjust(binom.test.res$`P-value`,"fdr")
 binom.test.res<-binom.test.res[order(binom.test.res[,"padj"],decreasing = FALSE),]
 
-write.csv(binom.test.res,file="8_outputs_DESeq_Plots/binom.test.res.csv")
+write.csv(binom.test.res,file="8_outputs_DESeq_batch_library_Plots/binom.test.res.csv")
+#write.csv(binom.test.res,file="8_outputs_DESeq/binom.test.res.csv")
 # # res_down<-resDE%>%filter(Cell_type =="3_Endothelial-1" & log2FoldChange<=0)
 # # binom.test(753,1653,0.5)
 # 
@@ -541,3 +553,13 @@ write.csv(binom.test.res,file="8_outputs_DESeq_Plots/binom.test.res.csv")
 # geneset<-geneset[-1,]
 # geneset<-t(geneset)
 # write.csv(geneset,"9_enrichment_Plots/geneset_gmtformat.csv")
+
+
+
+cell_marker_data <- read_tsv("Human_cell_markers.txt")
+
+## instead of `cellName`, users can use other features (e.g. `cancerType`)
+cells <- cell_marker_data %>%
+    dplyr::select(cellName, geneID) %>%
+    dplyr::mutate(geneID = strsplit(geneID, ', ')) %>%
+    tidyr::unnest()

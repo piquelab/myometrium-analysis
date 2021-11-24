@@ -10,15 +10,18 @@ library(reshape2)
 library(ggplot2)
 library(pheatmap)
 
-outFolder="6_celltype_cor_heatmap_plot/"
+#outFolder="6_celltype_cor_heatmap_plot/"
+outFolder="6_celltype_cor_heatmap_batch_corrected_plot/"
 system(paste0("mkdir -p ", outFolder))
 #########################
 
 
-res_de <-read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+#res_de <-read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+res_de <-read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/SIG.combined.2021-10-18.tsv")
 de_gene<-unique(res_de$gene_name)
 
-res <-read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+#res <-read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+res <-read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
 res$cluster<-unlist(strsplit(res$cname,"_"))[seq(1,2*length(res$cname),by=2)]
 res<-res  %>% filter ( gene_name %in% de_gene)
 

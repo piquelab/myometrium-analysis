@@ -4,7 +4,8 @@ library(igraph)
 library(ggraph)
 library(igraph)
 
-outFolder <- paste0("./13_network_analysis/")
+#outFolder <- paste0("./13_network_analysis/")
+outFolder <- paste0("./13_network_analysis_batch_corrected/")
 system(paste0("mkdir -p ",outFolder))
 
 
@@ -13,7 +14,8 @@ system(paste0("mkdir -p ",outFolder))
 # load data
 ################################################
 #res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
-res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
 
 res<-res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
 res <- res %>% filter(!is.na(pvalue))
@@ -23,6 +25,15 @@ names(clust2Names)<-c(0:23)
 res$Cell_type<-clust2Names[res$Cell_type]
 
 res <- res %>% filter(!is.na(log2FoldChange))
+
+res_stringweb <- res %>% filter(padj<=0.01 & abs(log2FoldChange)>=1.5 )
+write.csv(unique(res_stringweb$gene_name),file=paste0(outFolder,"stringweb_padj0.01_abslogfc1.5.csv"))
+
+
+res_stringweb <- res %>% filter(padj<=0.05 & abs(log2FoldChange)>=1 )
+write.csv(unique(res_stringweb$gene_name),file=paste0(outFolder,"stringweb_padj0.05_abslogfc1.csv"))
+
+
 
 ################################################
 # string db
@@ -38,16 +49,16 @@ names(aliases_map)<-aliases$alias
 #############################################################
 # select genes from smooth muscle cell-1
 ############################################################
-res<-res %>% filter(Cell_type=="Smooth muscle cells-1")
-
-
-res<-res %>% filter(padj <0.1)
-write.csv(res,file=paste0(outFolder,"DEpadj0.1_Smooth muscle cells-1.csv"))
-
-
-res<-res %>% filter(padj <=0.05)
-write.csv(res,file=paste0(outFolder,"DEpadj0.05_Smooth muscle cells-1.csv"))
-
+# res<-res %>% filter(Cell_type=="Smooth muscle cells-1")
+# 
+# 
+# res<-res %>% filter(padj <0.1)
+# write.csv(res,file=paste0(outFolder,"DEpadj0.1_Smooth muscle cells-1.csv"))
+# 
+# 
+# res<-res %>% filter(padj <=0.05)
+# write.csv(res,file=paste0(outFolder,"DEpadj0.05_Smooth muscle cells-1.csv"))
+# 
 
 
 ########################################################################################################
@@ -132,7 +143,8 @@ aliases_map<-aliases$STRING_id
 names(aliases_map)<-aliases$alias
 
 
-res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
 
 res<-res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
 res <- res %>% filter(!is.na(pvalue))
@@ -249,7 +261,11 @@ names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-
 
 
 
-myfill<-rep("#B0B0B0",length(node_size))
+# myfill<-rep("#B0B0B0",length(node_size))
+# names(myfill)<-names(node_size)
+
+
+myfill<-rep("white",length(node_size))
 names(myfill)<-names(node_size)
 
 
@@ -337,15 +353,17 @@ nm[which(node_size<0.2)]<-""
 ########################################
 # cell type colors
 ########################################
+
+pdf(paste0(outFolder,"network_de_celltype.pdf"),width=20,height=25)
 ggraph(subnetwork,layout = "kk") +  #fr  kk
-  geom_edge_link(colour = "gray",show.legend = FALSE,alpha=0.2) +
-  geom_node_point(aes(size = node_size),color=myfill,shape=16,show.legend = FALSE) + 
+  geom_edge_link(colour = "gray",alpha=0.2) +
+  geom_node_point(aes(size = node_size),color=myfill,shape=16,show.legend = TRUE) + 
   #scale_size(range = c(20, 30)) +
   #scale_color()+
   # theme_graph()+
   #scale_size(range = c(1,6))+
   #geom_node_point(aes(size = centrality, colour = centrality)) + 
-  geom_node_text(aes(label = nm), colour = 'black', vjust = -0.8,label.size = 0.85)+
+  geom_node_text(aes(label = nm), colour = 'black', vjust = -0.8,label.size = 0.9)+
   theme_bw()+
   xlab("")+
   ylab("")+
@@ -354,14 +372,20 @@ ggraph(subnetwork,layout = "kk") +  #fr  kk
       axis.ticks.x = element_blank(),
       axis.ticks.y = element_blank(),
       panel.grid.minor = element_blank(),
-      panel.grid.major = element_blank(),)
+      panel.grid.major = element_blank())
+#guides(colour = guide_legend(override.aes = list(size=5),title="Cell Type")) 
 #+scale_color_manual(values =cluster.Colors[unique(res$Cell_type)], labels = as.character(unique(res$Cell_type)))
 #+theme_graph()
-
+dev.off()
 
 ########################################
 # log2fc gradient
 ########################################
+
+
+
+pdf(paste0(outFolder,"network_de_gradient_test.pdf"),width=30,height=30)
+
 ggraph(subnetwork,layout = "kk") +  #fr  kk
   geom_edge_link(colour = "gray",show.legend = FALSE,alpha=0.2) +
   geom_node_point(aes(size = Centrality,color = log_fc_genes),shape=16,show.legend = TRUE,legend.title="centrality") +  #color=log_fc_genes
@@ -379,6 +403,7 @@ ggraph(subnetwork,layout = "kk") +  #fr  kk
         panel.grid.minor = element_blank(),
         panel.grid.major = element_blank(),)
 
+dev.off()
 
 
 ########################################
@@ -386,6 +411,8 @@ ggraph(subnetwork,layout = "kk") +  #fr  kk
 # node gradient: log2fc
 # centrality
 ########################################
+
+pdf(paste0(outFolder,"network_de_fill.pdf"),width=35,height=35)
 myfill[which(myfill=="#B0B0B0")]<-"black"
 
 ggraph(subnetwork,layout = "fr") +  #fr  kk
@@ -406,6 +433,6 @@ ggraph(subnetwork,layout = "fr") +  #fr  kk
         panel.grid.major = element_blank(),)
 
 
-
+dev.off()
 
 

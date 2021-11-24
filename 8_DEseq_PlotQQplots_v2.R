@@ -5,7 +5,8 @@ library(org.Hs.eg.db)
 library(clusterProfiler)
 
 
-outFolder <- paste0("./8_outputs_DESeq_Plots/")
+#outFolder <- paste0("./8_outputs_DESeq_Plots/")
+outFolder <- paste0("./8_outputs_DESeq_batch_library_Plots/")
 system(paste0("mkdir -p ",outFolder))
 
 
@@ -15,6 +16,8 @@ system(paste0("mkdir -p ",outFolder))
 
 ########################################################
 res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-08-30.tsv")
+
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
 
 ## cluster colors 
@@ -22,8 +25,8 @@ res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
 clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte", "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
 
 names(clust2Names)<-as.character(c(0:23))
-cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D","#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","2C3E18","#745B48","#AA5485","#4E747A","#C59A89","#C9C76F")   
-names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte", "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast", "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D","#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","#2C3E18","#745B48","#AA5485","#4E747A","#C59A89","#C9C76F")   
+names(cluster.Colors)<-clust2Names #c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte", "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast", "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
 
 
 # cluster labels
@@ -69,7 +72,7 @@ load_ref_data<-function(outFolder="reference_Adi/",fl="CELLECTA.rds")
     if(fl=="TLvsTNL_blood_ENTREZ" || fl=="TL-TNL_21vs28")
     {
         ref_data <- read.csv(paste0(fl,".csv"),stringsAsFactors = FALSE)
-        ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t)
+        ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t)
         colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
         ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
         return(ref_data)
@@ -78,7 +81,7 @@ load_ref_data<-function(outFolder="reference_Adi/",fl="CELLECTA.rds")
     if (fl=="myometrium_term_TL-TNL_ALLList"|| fl=="PMID31921132")
     {
         ref_data <- read.delim(paste0(fl,".txt"))
-        ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+        ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
         colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
         ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
         ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
@@ -88,7 +91,7 @@ load_ref_data<-function(outFolder="reference_Adi/",fl="CELLECTA.rds")
         if(fl=="myometrium_bulk")
         {
             ref_data <- read_tsv("myo_bulk_TIN_TNL.txt")
-            ref_data<-ref_data %>% select(SYMBOL,FoldChange,pval.fdr,ENTREZ ,t)
+            ref_data<-ref_data %>% dplyr::select(SYMBOL,FoldChange,pval.fdr,ENTREZ ,t)
             colnames(ref_data) <- c("R.gene_name","R.Log2FC","Rpadj","ENTREZID","Rt")
             ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
             ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
@@ -101,9 +104,9 @@ load_ref_data<-function(outFolder="reference_Adi/",fl="CELLECTA.rds")
         d<-readRDS(paste0("reference_Adi/",fl,".rds"))
         ref_data<-d[["LaborEffect"]]
         if(fl=="PCR.rds")
-            ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,t)
+            ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,t)
         else
-            ref_data<-ref_data %>% select(SYMBOL,log2FoldChange,P.Value,adj.P.Val,t)
+            ref_data<-ref_data %>% dplyr::select(SYMBOL,log2FoldChange,P.Value,adj.P.Val,t)
         
         colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","Rt")
         return (ref_data)
@@ -219,7 +222,7 @@ ggsave(fname,p1,width=6,height=4.5)
 # ggsave(fname,p1,width=6,height=4.5)
 
 
-de_gene_singlecell<-res2 %>% filter (padj<0.1) %>%  select(ENTREZID)
+de_gene_singlecell<-res2 %>% filter (padj<0.1) %>%  dplyr::select(ENTREZID)
 de_gene_only_ref<-ref_data2 %>% filter (Rpadj < 0.1 & !ENTREZID %in% de_gene_singlecell$ENTREZID )
 res4<-res2 %>% filter(!ENTREZID %in% de_gene_only_ref$ENTREZID)
 
@@ -288,7 +291,7 @@ ggsave(fname2,p2,width=6,height=4.5)
 
 #based on gene entrezid
 
-de_gene_bulk<-ref_data %>% filter (Rpadj<0.1) %>%  select(ENTREZID)
+de_gene_bulk<-ref_data %>% filter (Rpadj<0.1) %>%  dplyr::select(ENTREZID)
 de_gene_only_singlecell<-res2 %>% filter (padj < 0.1 & !ENTREZID %in% de_gene_bulk$ENTREZID )
 ref_data3<-ref_data %>% filter(!ENTREZID %in% de_gene_only_singlecell$ENTREZID)
 res5<-res2 %>% filter(!ENTREZID %in% ref_data3$ENTREZID)
@@ -319,14 +322,14 @@ ggsave(fname,p1,width=6,height=4.5)
 
 ref_data<-load_adi(fl="PCR.rds")
 outFolder<-"./8_outputs_DESeq_Plots/PCR/"
-de_gene_singlecell<-res2 %>% filter (padj<0.1) %>%  select(gene_name)
+de_gene_singlecell<-res2 %>% filter (padj<0.1) %>%  dplyr::select(gene_name)
 de_gene_only_ref<-ref_data %>% filter (Rpadj < 0.1 & !gene_name %in% de_gene_singlecell$gene_name )
 res3<-res2 %>% filter(gene_name %in% de_gene_only_ref$gene_name)
 
 
 ref_data<-load_adi(fl="CELLECTA.rds")
 outFolder<-"./8_outputs_DESeq_Plots/DriverMap/"
-de_gene_singlecell<-res2 %>% filter (padj<0.1) %>%  select(gene_name)
+de_gene_singlecell<-res2 %>% filter (padj<0.1) %>%  dplyr::select(gene_name)
 de_gene_only_ref<-ref_data %>% filter (Rpadj < 0.1 & !gene_name %in% de_gene_singlecell$gene_name )
 res3<-res2 %>% filter(gene_name %in% de_gene_only_ref$gene_name)
 
@@ -334,7 +337,7 @@ res3<-res2 %>% filter(gene_name %in% de_gene_only_ref$gene_name)
 
 ref_data<-load_adi(fl="RNASeq.rds")
 outFolder<-"./8_outputs_DESeq_Plots/RNASeq/"
-de_gene_singlecell<-res2 %>% filter (padj<0.1) %>%  select(gene_name)
+de_gene_singlecell<-res2 %>% filter (padj<0.1) %>%  dplyr::select(gene_name)
 de_gene_only_ref<-ref_data %>% filter (Rpadj < 0.1 & !gene_name %in% de_gene_singlecell$gene_name )
 res3<-res2 %>% filter(gene_name %in% de_gene_only_ref$gene_name)
 

@@ -25,19 +25,19 @@ library(magrittr)
 # Cibersortx Input data input preparation
 #############################################################
 
-
+outFolder<-"./14_deconvolution_blood/"
 set.seed(0)
 system(paste0("mkdir -p ",outFolder))
 
 
 
 # bulk data- log2fc  
-ref_data <- read.delim("myometrium_term_TL-TNL_ALLList.txt")
+#ref_data <- read.delim("myometrium_term_TL-TNL_ALLList.txt")
+ref_data <- read.csv("TLvsTNL_blood_ENTREZ.csv",stringsAsFactors = FALSE)
 ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
 colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
 ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
 ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
-
 
 
 ######################################################
@@ -46,7 +46,6 @@ ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
 # bulk data- samples  
 ######################################################
 load("TLTNLmyoToCaseWest.rdata")
-
 eset_bulk<-eset
 colnames(eset_bulk)<-unlist(strsplit(colnames(eset),"_"))[seq(2,2*length(colnames(eset)),by=2)]
 rownames(eset_bulk)<-unlist(strsplit(rownames(eset),"_"))[seq(2,2*length(rownames(eset)),by=2)]
@@ -105,6 +104,7 @@ cl<-cl[which(cl%in% names(sc2$seurat_clusters) )]
 data<-data[,cl]
 colnames(data)<-clust2Name[sc2$seurat_clusters[cl]] #
 
+data<-data[,which(colnames(data) %in% c("Macrophage","Monocyte","T-cell","NK-cell","ILC","DC","Plasmablast"))]
 
 tl<-table(rownames(data))
 nonrepeat<-data[rownames(data) %in% names(tl)[tl==1],]
@@ -142,9 +142,11 @@ singlecell.singature.avg <- do.call(cbind,mdata)
 singlecell.singature.avg<-cbind(rownames(singlecell.singature.avg), singlecell.singature.avg)
 colnames(singlecell.singature.avg)<-c("Gene symbol",unique(colnames(data)))
 
-write.table(singlecell.singature.avg, file=paste0(outFolder,'singlecell.singature.avg_exp.txt'), quote=FALSE, sep='\t', col.names = TRUE)
+system(paste0("mkdir -p ",outFolder,"merge_subcelltypes/"))
 
-singlecell.singature.avg<-read.delim("14_deconvolution_analysis/merge_subcelltypes/singlecell.singature.avg_exp.txt")
+write.table(singlecell.singature.avg, file=paste0(outFolder,'merge_subcelltypes/singlecell.singature.avg_exp.txt'), quote=FALSE, sep='\t', col.names = TRUE)
+
+singlecell.singature.avg<-read.delim(paste0(outFolder,"merge_subcelltypes/singlecell.singature.avg_exp.txt"))
 
 
 anno <- read_rds("3_MergeDemux_Output/anno.rds")
@@ -165,8 +167,8 @@ names(clust2Name)<-c(0:23)
 
 ##################################################################################################################################
 
-
-outFolder <- paste0("./14_deconvolution_analysis/merge_subcelltypes/")
+outFolder<- "./14_deconvolution_blood/"
+outFolder <- paste0(outFolder,"merge_subcelltypes/")
 HiResfiles <- list.files(paste0(outFolder,"CIBERSORTx_Job17_output/"),pattern="*_Window20.txt")
 
 HiResfiles<-HiResfiles[c(-6,-8)]

@@ -1101,3 +1101,8 @@ p<-res_genes %>%
   
 ggsave(paste0(outFolder,"forestPlot_bulkdata.pdf"),p,width=8,height=12)
 
+
+
+
+
+

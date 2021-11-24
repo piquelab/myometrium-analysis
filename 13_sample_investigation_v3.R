@@ -16,7 +16,10 @@ options(future.globals.maxSize = 30 * 1024 ^ 3)
 
 
 
-outFolder="13_sample_investigation_plots_V2/"
+# outFolder="13_sample_investigation_plots_V2/"
+# system(paste0("mkdir -p ", outFolder))
+
+outFolder="13_sample_investigation_plots_batch_corrected/"
 system(paste0("mkdir -p ", outFolder))
 
 
@@ -161,7 +164,8 @@ names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-
 
 
 # All DE genes from single cell analysis
-res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
 
 # Adding location, cell type, and origin columns 
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
@@ -190,15 +194,16 @@ res$Cell_type<-clust2Names[res$Cell_type]
 
 
 #genes_Myometrialpathway
-load(paste0("14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/genes_Myometrialpathway_decov_all_singlecell_SMC1_ORAwiki_myogenes.RData"))
+#load(paste0("14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/genes_Myometrialpathway_decov_all_singlecell_SMC1_ORAwiki_myogenes.RData"))
 
-outFolder<-"14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/"
+load("14_deconvolution_analysis_plots_batch_correction/genes_Myometrialpathway_decov_all_singlecell_SMC1_ORAwiki_myogenes.RData")
+#outFolder<-"14_deconvolution_analysis/merge_subcelltypes/CIBERSORTx_Job17_deseq_DEGs/"
 
 
 
 res_genes<-res[res$ENTREZID %in% genes_Myometrialpathway,]
 
-res_genes<-res_genes %>% filter (!gene_name %in% c("MYL2" ,"GUCY1A1","GABPB1"))
+#res_genes<-res_genes %>% filter (!gene_name %in% c("MYL2" ,"GUCY1A1","GABPB1"))
 
 
 unique(res_genes$gene_name)

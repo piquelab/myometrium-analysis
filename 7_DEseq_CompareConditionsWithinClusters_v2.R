@@ -194,10 +194,12 @@ anno_i <- all_i %>%
 
 #### barplot DE genes ###
 
-outFolder <- paste0("7_outputs_DESeq_ConditionsByCluster/")
+#outFolder <- paste0("7_outputs_DESeq_ConditionsByCluster/")
+outFolder <- paste0("7_outputs_DESeq_ConditionsByCluster_bath_library/")
 system(paste0("mkdir -p ",outFolder))
 
-res <-read_tsv(paste0(outFolder,"ALL.combined.2021-02-17.tsv"))
+#res <-read_tsv(paste0(outFolder,"ALL.combined.2021-02-17.tsv"))
+res <-read_tsv(paste0(outFolder,"ALL.combined.2021-10-18.tsv"))
 res_up<-res %>% filter(padj<0.1,log2FoldChange>0) %>% dplyr::count(cname)
 colnames(res_up)[2]<-"up-regulated"
 res_down<-res %>% filter(padj<0.1,log2FoldChange<0) %>% dplyr::count(cname)

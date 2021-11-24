@@ -23,6 +23,10 @@ options(future.globals.maxSize = 30 * 1024 ^ 3)
 
 # reference
 # more details here: https://satijalab.org/seurat/articles/multimodal_reference_mapping.html
+# https://www.sciencedirect.com/science/article/pii/S0092867421005833?via%3Dihub#bib6
+# https://www.sciencedirect.com/science/article/pii/S0031320310005819
+
+
 # reference <- LoadH5Seurat("Seurat_PBMC_multimodal/pbmc_multimodal.h5seurat")
 # save(reference,file="Seurat_PBMC_multimodal/pbmc_multimodal.RData")
 load("Seurat_PBMC_multimodal/pbmc_multimodal.RData")
@@ -124,6 +128,30 @@ anchors <- FindTransferAnchors(
 ##############################################
 #transfer cell type labels and protein data from the reference to the query
 ##############################################
+# https://satijalab.org/seurat/reference/mapquery
+# MapQuery() is a wrapper around three functions: TransferData(), IntegrateEmbeddings(), and ProjectUMAP(). 
+# TransferData() is used to transfer cell type labels and impute the ADT values. IntegrateEmbeddings() and ProjectUMAP() are used to project the query data onto the UMAP structure of the reference. The equivalent code for doing this with the intermediate functions is below:
+    
+    
+# Transfer data
+#TransferData()
+# https://satijalab.org/seurat/reference/transferdata 
+# The main difference between label transfer (classification) and feature imputation is what gets multiplied by the weights matrix. For label transfer, we perform the following steps: 
+#     Create a binary classification matrix, the rows corresponding to each possible class and the columns corresponding to the anchors. If the reference cell in the anchor pair is a member of a certain class, that matrix entry is filled with a 1, otherwise 0.
+
+
+# IntegrateEmbeddings()
+# https://satijalab.org/seurat/reference/integrateembeddings
+
+# ProjectUMAP()
+# https://satijalab.org/seurat/reference/projectumap
+
+# This function will take a query dataset and project it into the coordinates of a provided reference UMAP. This is essentially a wrapper around two steps:
+#     
+#     FindNeighbors - Find the nearest reference cell neighbors and their distances for each query cell.
+# 
+# RunUMAP - Perform umap projection by providing the neighbor set calculated above and the umap model previously computed in the reference.
+
 sc1 <- MapQuery(
     anchorset = anchors,
     query = sc1,

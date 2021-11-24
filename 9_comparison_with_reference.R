@@ -7,13 +7,9 @@ library(qqman)
 library(org.Hs.eg.db)
 library(clusterProfiler)
 
-
+# cutoff_cor_DE_cutoff_scatter_All
 
 ### Comparison with Mittal, Pooja, Roberto Romero, Adi L. Tarca, Juan Gonzalez, Sorin Draghici, Yi Xu, Zhong Dong et al. "Characterization of the myometrial transcriptome and biological pathways of spontaneous human labor at term." Journal of perinatal medicine 38, no. 6 (2010): 617-643. 
-
-
-
-
 
 
 ######################################################################### 
@@ -39,8 +35,12 @@ clust2Names<-paste0(c(0:23),"_",clust2Names)
 names(clust2Names)<-c(0:23)
 
 
-res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
-outFolder<-"./8_outputs_DESeq_Plots/"
+res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
+#res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+
+
+outFolder<-"./8_outputs_DESeq_batch_library_Plots/"
+#outFolder<-"./8_outputs_DESeq_Plots/"
 system(paste0("mkdir -p ",outFolder))
 # Adding location, cell type, and origin columns 
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
@@ -64,7 +64,7 @@ load_ref_data<-function(fl="CELLECTA.rds")
   if (fl=="TL-TNL_21vs28")
   {
     ref_data <- read.csv("TL-TNL_21vs28.csv",stringsAsFactors = FALSE)
-    ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+    ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
     colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
     ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
     return(ref_data)
@@ -73,7 +73,7 @@ load_ref_data<-function(fl="CELLECTA.rds")
   if (fl=="myometrium_term_TL-TNL_ALLList")
   {
     ref_data <- read.delim("myometrium_term_TL-TNL_ALLList.txt")
-    ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
+    ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,ENTREZ,t )
     colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
     ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
     ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
@@ -83,7 +83,7 @@ load_ref_data<-function(fl="CELLECTA.rds")
   if(fl=="myometrium_bulk")
   {
     ref_data <- read_tsv("myo_bulk_TIN_TNL.txt")
-    ref_data<-ref_data %>% select(SYMBOL,FoldChange,pval.fdr,ENTREZ ,t)
+    ref_data<-ref_data %>% dplyr::select(SYMBOL,FoldChange,pval.fdr,ENTREZ ,t)
     colnames(ref_data) <- c("R.gene_name","R.Log2FC","Rpadj","ENTREZID","Rt")
     ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
     ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
@@ -93,7 +93,7 @@ load_ref_data<-function(fl="CELLECTA.rds")
   else if (fl=="PMID31921132")
   {
     ref_data<-read.delim("PMID31921132.txt")
-    ref_data<-ref_data %>% select(SYMBOL,FC,P.Value,adj.P.Val,ENTREZ,t )
+    ref_data<-ref_data %>% dplyr::select(SYMBOL,FC,P.Value,adj.P.Val,ENTREZ,t )
     colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","ENTREZID","Rt")
     ref_data <- ref_data %>% filter(!is.na(R.Log2FC) & !is.na(ENTREZID)  & !is.na(Rpadj))
     ref_data$ENTREZID<-as.character(ref_data$ENTREZID)
@@ -105,9 +105,9 @@ load_ref_data<-function(fl="CELLECTA.rds")
     d<-readRDS(paste0("reference_Adi/",fl))
     ref_data<-d[["LaborEffect"]]
     if(fl=="PCR.rds")
-      ref_data<-ref_data %>% select(SYMBOL,logFC,P.Value,adj.P.Val,t)
+      ref_data<-ref_data %>% dplyr::select(SYMBOL,logFC,P.Value,adj.P.Val,t)
     else
-      ref_data<-ref_data %>% select(SYMBOL,log2FoldChange,P.Value,adj.P.Val,t)
+      ref_data<-ref_data %>% dplyr::select(SYMBOL,log2FoldChange,P.Value,adj.P.Val,t)
     
     colnames(ref_data)<-c("R.gene_name","R.Log2FC","Rpvalue","Rpadj","Rt")
     return (ref_data)
@@ -128,22 +128,24 @@ cor_with_ref<-function(experiment="RNASeq",ref_cutoff="All",plotcolor=TRUE)
   
   if (experiment=="TL-TNL_21vs28")
     ref_data<-load_ref_data(fl=experiment) 
-  else 
+   
   if (experiment=="myometrium_term_TL-TNL_ALLList")
     ref_data<-load_ref_data(fl=experiment) 
-  else 
-    if(experiment=="PMID31921132")
-      ref_data<-load_ref_data(fl=experiment) 
-    else
-      if(experiment!="myometrium_bulk")
-        ref_data<-load_ref_data(fl=paste0(experiment,".rds")) 
-      else
-    ref_data <- load_ref_data(fl="myometrium_bulk")
-  
-    if(experiment=="CELLECTA")
-    outFolder<-paste0("./8_outputs_DESeq_Plots/DriverMap/",ref_cutoff,"/")  else outFolder<-paste0("./8_outputs_DESeq_Plots/", experiment,"/",ref_cutoff,"/")
-    system(paste0("mkdir -p ",outFolder))
+  # else 
+  #   if(experiment=="PMID31921132")
+  #     ref_data<-load_ref_data(fl=experiment) 
+  #   else
+  #     if(experiment!="myometrium_bulk")
+  #       ref_data<-load_ref_data(fl=paste0(experiment,".rds")) 
+  #     else
+  #   ref_data <- load_ref_data(fl="myometrium_bulk")
+  # 
+  #   if(experiment=="CELLECTA")
+  #   outFolder<-paste0("./8_outputs_DESeq_Plots/DriverMap/",ref_cutoff,"/")  else outFolder<-paste0("./8_outputs_DESeq_Plots/", experiment,"/",ref_cutoff,"/")
+  #   system(paste0("mkdir -p ",outFolder))
 
+  
+  outFolder<-paste0(outFolder, experiment,"/",ref_cutoff,"/")
     
    # calculate the correlation 
   correlation_result<-sapply(unique(res$Cell_type),function(x){
@@ -260,8 +262,12 @@ cor_with_ref<-function(experiment="RNASeq",ref_cutoff="All",plotcolor=TRUE)
 correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",ref_cutoff="All")
 correlation_result<-cor_with_ref(experiment="myometrium_term_TL-TNL_ALLList",ref_cutoff="DE")
 correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",ref_cutoff="All")
+correlation_result<-cor_with_ref(experiment="TL-TNL_21vs28",ref_cutoff="All")
 
 
+
+ref_cutoff<-"All"
+experiment="myometrium_term_TL-TNL_ALLList"
 
 rownames(correlation_result)<-c("spearman_cor","spearman_pvalue","pearson_cor","pearson_pvalue")
 colnames(correlation_result)<-as.character(clust2Names[unique(res$Cell_type)])
@@ -298,7 +304,10 @@ write.csv(correlation_result,file=paste0(outFolder,"/",experiment,"/",ref_cutoff
   #dat2$cluster <- factor(dat2$cluster,levels=unique(dat2$cluster))
   dat2<-dat2[order(dat2$clusternumber,decreasing = FALSE),]
   
-  fname=paste0(outFolder,"barplot_cor_v2.pdf")
+  
+  fname=paste0(outFolder,"/",experiment,"/",ref_cutoff,"barplot_cor_v2.pdf")
+  
+  #fname=paste0(outFolder,"barplot_cor_v2.pdf")
   pdf(fname,width=12,height=6)
   ggplot(data=dat2, aes(x=cluster, y=value,fill=cluster)) +
     geom_bar(stat="identity",position="stack")+
@@ -375,10 +384,12 @@ barplot_data<-barplot_data[order(barplot_data[,"single_cell"]),]
 cl<-rownames(barplot_data)
 rownames(barplot_data)<-NULL
 par(mar=c(4, 14 ,4.1 ,2.1))
-outFolder<-"./8_outputs_DESeq_Plots/"
+#outFolder<-"./8_outputs_DESeq_Plots/"
 
 fname=paste0(outFolder,"comparison_with_bulk.pdf");
-pdf(fname,width=3,height=4)
+
+pdf(fname,width=10,height=8)
+par(mar=c(20,10,4,2))
 rownames(barplot_data)<-NULL
 
 out<-barplot(t(barplot_data),beside=FALSE,horiz=TRUE,col = c("#0000EE","#BDD7EE"),axis.lty=1,las=1,xlab=seq(0,max(barplot_data),by=500),xlim=c(0,2500))
@@ -404,7 +415,7 @@ barplot_data<-barplot_data[order(barplot_data[,"single_cell"]),]
 cl<-rownames(barplot_data)
 rownames(barplot_data)<-NULL
 par(mar=c(4, 14 ,4.1 ,2.1))
-outFolder<-"./8_outputs_DESeq_Plots/"
+#outFolder<-"./8_outputs_DESeq_Plots/"
 
 fname=paste0(outFolder,"comparison_with_bulk.pdf");
 pdf(fname,width=3,height=4)
@@ -437,12 +448,12 @@ values=c("None"="#CCCCCC","Only single cell"="#BDD7EE","Only bulk"="#DD99DD","Si
 # to do: meta plot and boxplot
 ############################################################
 ref_data<-load_ref_data(fl="RNASeq.rds")
-outFolder<-"./8_outputs_DESeq_Plots/RNASeq/"
+#outFolder<-"./8_outputs_DESeq_Plots/RNASeq/"
 correlation_result<-cor_with_ref("RNASeq")
 
 
 ref_data<-load_ref_data(fl="CELLECTA.rds")
-outFolder<-"./8_outputs_DESeq_Plots/DriverMap/"
+#outFolder<-"./8_outputs_DESeq_Plots/DriverMap/"
 # correlation_result<-cor_with_ref("CELLECTA")
 
 intersected_genes<-c()
@@ -460,3 +471,64 @@ for (x in unique(res$Cell_type))
 write.csv(intersected_genes,file=paste0(outFolder,"intersected_genes.csv"))
 
 intersected_genes<-read.csv(paste0(outFolder,"intersected_genes.csv"),stringsAsFactors = FALSE)
+
+
+
+#################### 
+# comparison with elife
+
+outFolder<-"./8_outputs_DESeq_batch_library_Plots/"
+#outFolder<-"./8_outputs_DESeq_Plots/"
+system(paste0("mkdir -p ",outFolder))
+
+
+res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
+res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
+res <- res %>% filter(!is.na(pvalue))
+#res$Cell_type<-clust2Names[res$Cell_type]
+#anno <- read_rds("3_MergeDemux_Output/anno.rds")
+eg = bitr(res$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
+names(eg)[1]="gene_name"
+head(eg)
+e2g <- eg$gene_name
+names(e2g) <- eg$ENTREZID
+
+#ENTREZID
+res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
+res$Cell_type<-clust2Names[res$Cell_type]
+
+res<-res %>% filter(padj <0.1)
+
+
+
+elife <- read_tsv("./elife-52004-supp5-v2.txt")
+elife<-elife %>% filter(padj <0.1)
+
+sharedDE_elife_myo<-matrix(0, nrow=length(unique(elife$Cluster)), ncol=length(unique(res$Cell_type)))
+for ( i in 1:length(unique(elife$Cluster)))
+{
+ for (j in 1: length(unique(res$Cell_type)))
+ {
+   
+   celltypei<-unique(elife$Cluster)[i]
+   celltypej<-unique(res$Cell_type)[j]
+   rescelltype<-res %>% filter(Cell_type==celltypej)
+   elifecelltype<-elife %>% filter(Cluster==celltypei)
+   #overlap <- length(intersect(rescelltype$gene_name, elifecelltype$Gene))
+   jaccard_similarity<-length(unique(intersect(rescelltype$gene_name, elifecelltype$Gene)))/length(unique(c(rescelltype$gene_name, elifecelltype$Gene)))
+   sharedDE_elife_myo[i,j]<-jaccard_similarity
+   
+ }
+}
+
+rownames(sharedDE_elife_myo)<-unique(elife$Cluster)
+colnames(sharedDE_elife_myo)<-unique(res$Cell_type)
+
+rownames(sharedDE_elife_myo)<-paste0(rownames(sharedDE_elife_myo)," (elife)")
+colnames(sharedDE_elife_myo)<-paste0(colnames(sharedDE_elife_myo)," (myometrium)")
+
+
+sharedDE_elife_myo
+
+write.csv(sharedDE_elife_myo,file=paste0(outFolder,"sharedDE_elife_myo.csv"))
+write.csv(sharedDE_elife_myo,file=paste0(outFolder,"jaccard_similarity_elife_myo.csv"))

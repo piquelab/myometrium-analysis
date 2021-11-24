@@ -3,13 +3,17 @@ library(tidyverse)
 library(reshape2)
 library(ggplot2)
 
-outFolder="6_celltype_cor_heatmap_plot/"
+
+outFolder="6_celltype_cor_heatmap_batch_corrected_plot/"
+#outFolder="6_celltype_cor_heatmap_plot/"
 system(paste0("mkdir -p ", outFolder))
 #
-res_de <-read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
+res_de <-read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/SIG.combined.2021-10-18.tsv")
+#res_de <-read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
 res_de$cluster<-unlist(strsplit(res_de$cname,"_"))[seq(1,2*length(res_de$cname),by=2)]
 de_gene<-unique(res_de$gene_name)
-res <-read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+#res <-read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+res <-read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
 res$cluster<-unlist(strsplit(res$cname,"_"))[seq(1,2*length(res$cname),by=2)]
 res<-res  %>% filter ( gene_name %in% de_gene)
 
@@ -66,12 +70,19 @@ pdf(fname,width=7,height=7)
 #pheatmap(cor_matrix,cluster_rows=TRUE,cluster_cols=TRUE,scale="none")
 #my_palette <- colorRampPalette(c("blue", "white", "red"))(n = 201)
 paletteLength<-30
-my_palette <- colorRampPalette(colors = c("#333399", "white", "#A50021"))(n = paletteLength)
-myBreaks <- c(seq(min(cor_matrix), 0, length.out=ceiling(paletteLength/2) + 1), 
-              seq(max(cor_matrix)/paletteLength, max(cor_matrix), length.out=floor(paletteLength/2)))
+# my_palette <- colorRampPalette(colors = c("#333399", "white", "#A50021"))(n = paletteLength+1)
+#  myBreaks <- c(seq(min(cor_matrix),0, length.out=ceiling(paletteLength/2) + 1), 
+#                seq(max(cor_matrix)/paletteLength, max(cor_matrix), length.out=floor(paletteLength/2)))
 
+ my_palette <- colorRampPalette(colors = c("#E8F4F8","white", "#A50021"))(n = paletteLength+1)
+ myBreaks <- c(seq(min(cor_matrix),0, length.out=ceiling(paletteLength/2) + 1), 
+               seq(max(cor_matrix)/paletteLength, max(cor_matrix), length.out=floor(paletteLength/2)))
+ 
 pheatmap(cor_matrix,cluster_rows=TRUE,color=my_palette,scale="none",breaks=myBreaks)
 dev.off()
+
+
+
 
 
 
