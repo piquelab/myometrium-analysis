@@ -9,6 +9,7 @@ library(clusterProfiler)
 library(ReactomePA)
 library(dplyr)
 library(stringr)
+library(magrittr)
 
 
 outFolder <- paste0("11_pathway_enrichment_batch_library_corrected/")
@@ -78,10 +79,8 @@ pathway_enrich<-function(res_gene=res3,cname_select="CAM_T-cell_M",padj_cutoff=0
 }
 
 
-
 # load DE genes
 res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-08-30.tsv")
-#res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
 
 # Adding location, cell type, and origin columns 
 res <- res %>% separate(cname,c("Cluster","Origin"),sep="_",remove=FALSE) #Cell_type
@@ -138,6 +137,12 @@ which(DE_per_cname>0)
 #####                                  dot plot
 ##########################################################################################
 
+
+
+######################################################
+# Pathway enrichment analysis (ORA)
+# based on specific cell types 
+######################################################
 
 #load(paste0("11_pathway_enrichment_batch_library_corrected/pathwayEnrich_result.RData"))
 load(paste0("11_pathway_enrichment/pathwayEnrich_result.RData"))
@@ -239,8 +244,6 @@ dev.off()
 
 
 
-####################
-
 #enrichKEGG
 res_enrichKEGG_list<-lapply(cname_selected, function(x)
 {
@@ -283,7 +286,6 @@ ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pat
 dev.off()
 
 
-####################
 
 #enrichPathway
 
@@ -329,9 +331,8 @@ ggplot(res_df_enrichPathway, # you can replace the numbers to the row number of 
 dev.off()
 
 ############################################################
-
+### Pathway enrichment analysis (ORA)
 ### DE genes combined
-
 ############################################################
 
 
@@ -369,7 +370,6 @@ ggplot(res_df_enrichGO, # you can replace the numbers to the row number of pathw
     theme_bw()+
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
 dev.off()
-
 
 
 
@@ -430,8 +430,9 @@ dev.off()
 
 
 
-
-####################
+################################################## 
+# WikiPathways
+################################################## 
 
 
 res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-08-30.tsv")
@@ -466,16 +467,11 @@ geneList = sort(geneList, decreasing = TRUE)
 
 res$cname<-paste0(res$Cell_type,"_",res$Origin)
 
-
-library(magrittr)
-library(clusterProfiler)
-
-
-
-
-
-
+########################################################
+# Pathway enrichment analysis (ORA)- cell type specific 
+# WikiPathways
 #qvalueCutoff  = 0.05
+########################################################
 
 pathway_enrich<-function(res_gene=res,cname_select ,padj_cutoff=0.1,log2FoldChange_cutoff=0)
 {
@@ -539,13 +535,11 @@ res_df_enrichwiki$GeneRatio<-sapply(res_df_enrichwiki$GeneRatio, function(x){
 })
 
 
-
-
 # WP289: Myometrial Relaxation and Contraction Pathways
 genes_WP289<-unlist(strsplit(res_df_enrichwiki$geneID[which(res_df_enrichwiki$ID=="WP289")],"/"))
 
 
-
+# ORA
 
 res_df<-res_df_enrichwiki
 pdf(paste0(outFolder,"enrich_wikipathways_cname_DotPlot.pdf"),width=35,height=52)
@@ -570,8 +564,11 @@ ggplot(res_df, # you can replace the numbers to the row number of pathway of you
 dev.off()
 
 
+########################################################
+# ORA -all DEGs combined
+# WikiPathways
+########################################################
 
-#####
 
 gene<-genes <- filter(res,padj<0.1,abs(log2FoldChange)>0) %>% dplyr::select(ENTREZID) %>% unlist
 geneUniv <- res %>% dplyr::select(ENTREZID) %>% unlist
@@ -614,13 +611,8 @@ ggplot(res_df, # you can replace the numbers to the row number of pathway of you
 dev.off()
 
 
-####################
-
-
-# res<-res %>% filter(padj<0.1)
-# res_smc<-res %>% filter(cname=="Smooth muscle cells-1_M")
-# write.csv(unique(res_smc$gene_name),file="7_outputs_DESeq_ConditionsByCluster_bath_library/DEG_FDR0.1_smc1.csv")
-
+###########################################################
+# Pathway enrichment analysis on subtypes
 ###########################################################
 
 # load DE genes
@@ -648,10 +640,11 @@ names(e2g) <- eg$ENTREZID
 # non-na ENTREZID were included
 res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
 
+######################################################################################################################
+# Pathway analysis based on shared DEGs and DEGs specific to each cell type
+# macrophage-1 and macrophage-2 and macrophage-3
+######################################################################################################################
 
-
-
-# Pathway analysis based on shared and specific DEGs to macrophage-1 and macrophage-2 and macrophage-3
 res3<-res %>% filter(padj<0.1)
 res_intersect_macrophages<-res3 %>% filter(Cell_type %in% c("Macrophage-3","Macrophage-2","Macrophage-1"))
 
@@ -679,8 +672,9 @@ grid.draw(venn.plot)
 dev.off()
 
 
-
-###### shared DEGs 
+###########################################################
+###### shared DEGs (macrophage-1 and macrophage-2 and macrophage-3)
+###########################################################
 
 genes <- filter(res_intersect_macrophages,padj<0.1) %>% dplyr::select(ENTREZID) %>% unlist %>% unique
 geneUniv <- res %>% dplyr::select(ENTREZID) %>% unlist %>% unique
@@ -723,9 +717,7 @@ dev.off()
 
 
 
-
-
-
+###########################################################
 print(".................................")
 print("enrichKEGG")
 ekegg <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa",minGSSize = 5)
@@ -757,7 +749,7 @@ dev.off()
 
 
 
-
+###########################################################
 message(".................................")
 message("enrichPathway")
 erpath <- enrichPathway(gene=genes,universe=geneUniv,minGSSize = 5)
@@ -789,9 +781,13 @@ ggplot(res_df_enrichPathway, # you can replace the numbers to the row number of 
 dev.off()
 
 
-########################################################################
+################################################################################################################################################
+# pathway enrichment analysis based on specific cell markers (macrophage-1 and macrophage-2 and macrophage-3)
+################################################################################################################################################
 
-# specific to Macrophage-1
+
+########################################################################
+# DEGs specific to Macrophage-1
 ########################################################################
 
 genes<-Macrophage1[which(!Macrophage1 %in% c(Macrophage2,Macrophage3))]
@@ -837,7 +833,6 @@ dev.off()
 
 
 
-
 print(".................................")
 print("enrichKEGG")
 ekegg <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa",minGSSize = 5)
@@ -866,7 +861,6 @@ ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pat
     theme_bw()+
     theme(axis.text=element_text(size=30), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
 dev.off()
-
 
 
 
@@ -903,7 +897,7 @@ dev.off()
 
 ########################################################################
 
-# specific to Macrophage-2
+# DEGs specific to Macrophage-2
 ########################################################################
 
 genes<-Macrophage2[which(!Macrophage2 %in% c(Macrophage1,Macrophage3))]
@@ -948,8 +942,6 @@ dev.off()
 
 
 
-
-
 print(".................................")
 print("enrichKEGG")
 ekegg <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa",minGSSize = 5)
@@ -978,7 +970,6 @@ ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pat
     theme_bw()+
     theme(axis.text=element_text(size=30), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
 dev.off()
-
 
 
 
@@ -1013,10 +1004,10 @@ res_df_enrichPathway$GeneRatio<-sapply(res_df_enrichPathway$GeneRatio, function(
 # dev.off()
 
 
+############################################################
+# Pathway enrichment analysis 
 
-########################################################################
-
-# specific to Macrophage-3
+# DEGs specific to Macrophage-3
 ########################################################################
 
 genes<-Macrophage3[which(!Macrophage3 %in% c(Macrophage1,Macrophage2))]
@@ -1061,8 +1052,6 @@ dev.off()
 
 
 
-
-
 print(".................................")
 print("enrichKEGG")
 ekegg <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa",minGSSize = 5)
@@ -1091,7 +1080,6 @@ ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pat
     theme_bw()+
     theme(axis.text=element_text(size=30), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30)) 
 dev.off()
-
 
 
 
@@ -1162,9 +1150,6 @@ if (subtype=="Stromal2")
     genes<-names(e2g)[which(e2g %in%stromal2)]
 
 
-# genes<-names(e2g)[which(e2g %in%stromal2)]
-# genes<-names(e2g)[which(e2g %in%myofibroblast)]
-
 
 res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-08-30.tsv")
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
@@ -1194,7 +1179,6 @@ res <- res %>% left_join(eg) %>% filter(!is.na(ENTREZID))
 geneUniv <- res %>% dplyr::select(ENTREZID) %>% unlist %>% unique
 #geneUniv <- unique(m2$symbol)
 #geneUniv<-names(e2g)[which(e2g %in%geneUniv)]
-
 
 
 
@@ -1231,8 +1215,6 @@ dev.off()
 
 
 
-
-
 print(".................................")
 print("enrichKEGG")
 ekegg <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa",minGSSize = 5)
@@ -1261,8 +1243,6 @@ ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pat
     theme_bw()+
     theme(axis.text=element_text(size=30), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30))
 dev.off()
-
-
 
 
 message(".................................")
@@ -1297,13 +1277,11 @@ dev.off()
 
 
 
-
-
-
-############################################################
-# pathway enrichment analysis 
-# Smooth muscle cells 
-###########################################################
+################################################################################################################################################
+# pathway enrichment analysis based on specific cell markers (smooth muscle cells )
+# top 100 cell markers
+################################################################################################################################################
+# SMC-1, SMC-2, SMC-3 
 
 res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-08-30.tsv")
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
@@ -1336,13 +1314,11 @@ allmarkers<-allmarkers %>%filter(p_val_adj<0.05)
 allmarkers$Cell_type<-clust2Names[as.character(allmarkers$cluster)]
 
 
-
 outFolder <- paste0("11_pathway_enrichment_batch_library_corrected/")
 subtype<-"SMC1"
 subtype<-"SMC2"
 subtype<-"SMC3"
 system(paste0("mkdir -p ",outFolder, subtype,"/"))
-
 
 
 #m2 = read_tsv("5_harmonySubTypesDGE/SMC/ClusterDEG.tsv")
@@ -1365,12 +1341,9 @@ if (subtype=="SMC2")
 # genes<-names(e2g)[which(e2g %in%myofibroblast)]
 
 
-
 geneUniv <- res %>% dplyr::select(ENTREZID) %>% unlist %>% unique
 #geneUniv <- unique(m2$symbol)
 #geneUniv<-names(e2g)[which(e2g %in%geneUniv)]
-
-
 
 
 message(".................................")
@@ -1406,8 +1379,6 @@ dev.off()
 
 
 
-
-
 print(".................................")
 print("enrichKEGG")
 ekegg <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa",minGSSize = 5)
@@ -1436,7 +1407,6 @@ ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pat
     theme_bw()+
     theme(axis.text=element_text(size=30), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30))
 dev.off()
-
 
 
 
@@ -1472,11 +1442,9 @@ dev.off()
 
 
 
-
-
 ############################################################
 # pathway enrichment analysis 
-# Macrophages
+# Macrophages cell markers
 ###########################################################
 
 res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-08-30.tsv")
@@ -1509,15 +1477,12 @@ allmarkers<-read.csv(file=paste0("5_harmonyClustersDGE/ClusterDEG.csv"),stringsA
 allmarkers<-allmarkers %>%filter(p_val_adj<0.05)
 allmarkers$Cell_type<-clust2Names[as.character(allmarkers$cluster)]
 
-
-
 outFolder <- paste0("11_pathway_enrichment_batch_library_corrected/")
 subtype<-"Macrophage1-cellmarkers"
 subtype<-"Macrophage2-cellmarkers"
 subtype<-"Macrophage3-cellmarkers"
 subtype<-"Macrophage4-cellmarkers"
 system(paste0("mkdir -p ",outFolder, subtype,"/"))
-
 
 
 #m2 = read_tsv("5_harmonySubTypesDGE/Macrophage/ClusterDEG.tsv")
@@ -1538,17 +1503,7 @@ if (subtype=="Macrophage3-cellmarkers")
     genes<-names(e2g)[which(e2g %in%mac3)]
 
 
-
-# genes<-names(e2g)[which(e2g %in%stromal2)]
-# genes<-names(e2g)[which(e2g %in%myofibroblast)]
-
-
-
 geneUniv <- res %>% dplyr::select(ENTREZID) %>% unlist %>% unique
-#geneUniv <- unique(m2$symbol)
-#geneUniv<-names(e2g)[which(e2g %in%geneUniv)]
-
-
 
 
 message(".................................")
@@ -1584,8 +1539,6 @@ dev.off()
 
 
 
-
-
 print(".................................")
 print("enrichKEGG")
 ekegg <- enrichKEGG(gene=genes,universe=geneUniv,organism="hsa",minGSSize = 5)
@@ -1614,7 +1567,6 @@ ggplot(res_df_enrichKEGG, # you can replace the numbers to the row number of pat
     theme_bw()+
     theme(axis.text=element_text(size=30), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=30))
 dev.off()
-
 
 
 
@@ -1652,8 +1604,12 @@ dev.off()
 
 
 ########################################################################################
+# Pathway enrichment analysis
+########################################################################################
 
-# SMC-1
+
+# SMC-1 
+# pathway enrichment analysis DEGs in SMC-1
 
 res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-08-30.tsv")
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
