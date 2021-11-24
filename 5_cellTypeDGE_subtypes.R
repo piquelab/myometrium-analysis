@@ -1,5 +1,5 @@
 #############################################################
-### cluster marker identification
+### sub-type marker identification
 ### 
 #############################################################
 
@@ -33,11 +33,7 @@ table(sc$Library)
 
 table(sc$Location) 
 
-# outFolder="./5_harmonySubTypesDGE/SMC/"
-# outFolder="./5_harmonySubTypesDGE/Macrophage/"
-# outFolder="./5_harmonySubTypesDGE/Stromal/"
 system(paste0("mkdir -p ", outFolder))
-
 
 
 clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte", "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
@@ -67,7 +63,6 @@ m2 <- markers %>% left_join( dplyr::select(anno,gene=kbid,symbol=gene_name,rs))
 m2 <- m2 %>% arrange(cluster,-avg_log2FC) %>% group_by(cluster)
 
 
-
 top100 <- m2 %>% top_n(n = 100, wt = avg_log2FC)
 
 fname=paste0(outFolder,"ClusterDEG.tsv");
@@ -75,17 +70,10 @@ write_tsv(m2,fname)
 write.csv(m2,file=paste0(outFolder,"ClusterDEG.csv"))
 
 
-# m2<-read_tsv(fname)
-#
-
  fname=paste0(outFolder,"ClusterDEGtop100.tsv");
  write_tsv(top100,fname)
  write.csv(top100,file=paste0(outFolder,"ClusterDEGtop100.csv"))
  
-# top100<-read_tsv(fname)
-# write.csv(top100,file=paste0(outFolder,"ClusterDEGtop100.csv"))
-
-
 
 #################
  
