@@ -2,6 +2,7 @@
 ##################################################################
 ### Plotting the top 3 down-regulated and up-regulated genes ###
 ##  Plotting DE genes per cell types
+#   Plotting SMC-1 DEGs
 ##################################################################
 
 library(Seurat)
@@ -17,8 +18,6 @@ system(paste0("mkdir -p ",outFolder))
 
 
 ##loading all DE genes FDR < 0.1
-#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/SIG.combined.2021-02-17.tsv")
-#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
 res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
 
 # Adding location, cell type, and origin columns 
@@ -26,28 +25,15 @@ res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
 res <- res %>% filter(!is.na(pvalue))
 res<-res[order(abs(res$log2FoldChange), abs(res$baseMean),decreasing = TRUE),]
 
-
 clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
 names(clust2Names)<-c(0:23)
 res$Cell_type<-clust2Names[res$Cell_type]
 
 
 
-# covid investigation
-
-# res <- read_tsv("/wsu/home/fd/fd43/fd4387/scilab/labor2/covid-analysis/2020-11-16_Azam/7_outputs_DESeq_ConditionsByCluster_filtered_HPL20874_2020-11-28/ALL.combined.2020-11-28.tsv")
-# 
-# # Adding location, cell type, and origin columns 
-# res <- res %>% separate(cname,c("Location","Cell_type","Origin"),sep="_",remove=FALSE)
-# res <- res %>% filter(!is.na(pvalue))
-# res<-res[order(abs(res$log2FoldChange), abs(res$baseMean),decreasing = TRUE),]
-
-
-#covid 
-#sc <- read_rds("/wsu/home/fd/fd43/fd4387/scilab/labor2/covid-analysis/2020-10-02/6_harmony_rename_res0.8_plots/SeuratObject.rds")
-
-
-
+######################################## 
+# single cell data 
+########################################
 sc<- read_rds("6_harmony_cellClass_plots_res0.8_final/SeuratObject.rds")
 
 cmd <- paste0("zcat ",
@@ -75,7 +61,7 @@ head(anno)
 
 head(aux)
 
-# anno$gene_name[which(anno$kbid=="ENSG00000184995.7")]
+
 
 clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
 names(clust2Names)<-c(0:23)
@@ -97,7 +83,7 @@ colnames(mat)<-c("barcode","cell-type","transcript","cluster-ID")
 # write.csv(mat, file="transcript_matrix_covid19_v2_IFNE.csv",quote = FALSE,row.names = FALSE)
 write.csv(mat, file="transcript_matrix_myometrium_IFNE.csv",quote = FALSE,row.names = FALSE)
 
-  
+
 ################################################
 # Violin pot
 ################################################
@@ -141,27 +127,27 @@ rec <- map_dfr(1:(dim(res_violin)[1]),function(ii){
 dim(rec)
 # splited violin pot
 GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin, 
-                          draw_group = function(self, data, ..., draw_quantiles = NULL) {
-                            data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
-                            grp <- data[1, "group"]
-                            newdata <- plyr::arrange(transform(data, x = if (grp %% 2 == 1) xminv else xmaxv), if (grp %% 2 == 1) y else -y)
-                            newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
-                            newdata[c(1, nrow(newdata) - 1, nrow(newdata)), "x"] <- round(newdata[1, "x"])
-                            
-                            if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
-                              stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
-                                                                        1))
-                              quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
-                              aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
-                              aesthetics$alpha <- rep(1, nrow(quantiles))
-                              both <- cbind(quantiles, aesthetics)
-                              quantile_grob <- GeomPath$draw_panel(both, ...)
-                              ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
-                            }
-                            else {
-                              ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
-                            }
-                          })
+                           draw_group = function(self, data, ..., draw_quantiles = NULL) {
+                             data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+                             grp <- data[1, "group"]
+                             newdata <- plyr::arrange(transform(data, x = if (grp %% 2 == 1) xminv else xmaxv), if (grp %% 2 == 1) y else -y)
+                             newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
+                             newdata[c(1, nrow(newdata) - 1, nrow(newdata)), "x"] <- round(newdata[1, "x"])
+                             
+                             if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+                               stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
+                                                                         1))
+                               quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
+                               aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
+                               aesthetics$alpha <- rep(1, nrow(quantiles))
+                               both <- cbind(quantiles, aesthetics)
+                               quantile_grob <- GeomPath$draw_panel(both, ...)
+                               ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
+                             }
+                             else {
+                               ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
+                             }
+                           })
 
 geom_split_violin <- function(mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., 
                               draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, 
@@ -202,14 +188,14 @@ rec %>% ggplot(aes(x=reorder(gene_name,(log2FoldChange)),y=log10(Expression),fil
   #geom_jitter(shape=16, position=position_jitter(width = NULL, height = NULL))+
   theme(axis.text.x = element_text(angle = 45,hjust=1),text = element_text(size=30)) +  #,text = element_text(size=30)
   facet_grid(~cluster_name, scale="free",space="free")+
- scale_y_continuous(limits = c(1, 5))
+  scale_y_continuous(limits = c(1, 5))
 dev.off()
 
 
 
 
 ################################################
-#Forest Plot 
+#Forest Plot DEGs
 ################################################
 
 res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
@@ -224,6 +210,12 @@ clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocy
 names(clust2Names)<-c(0:23)
 res$Cell_type<-clust2Names[res$Cell_type]
 
+
+
+###############################################################################
+## forestPlot DEGs
+# padj <=0.05 & abs(log2FoldChange)>=2
+###############################################################################
 
 
 # current version
@@ -251,9 +243,9 @@ p<-res_select %>%
   ggplot(aes(x=reorder(gene_name,(log2FoldChange),color="black"),y=log2FoldChange),color="black") +
   geom_errorbar(aes(ymax = log2FoldChange + 1.96*lfcSE, ymin = log2FoldChange - 1.96*lfcSE),size=1.2,color="black",alpha=1,width=0,position=position_dodge(width=0.2)) +
   geom_point(aes(size=padj),position=position_dodge(width=0.2),color="#111111") +
-      ##scale_color_manual(guide = guide_legend(reverse = TRUE) ) +
-    scale_size("q-values", trans="log10", range=c(7, 1),limits=c(1E-10,1), breaks=c(1E-12,1E-6,0.001,0.01,0.1)) +
-    ## scale_alpha_manual(values=c(0.3, 1.0),guide=FALSE) +
+  ##scale_color_manual(guide = guide_legend(reverse = TRUE) ) +
+  scale_size("q-values", trans="log10", range=c(7, 1),limits=c(1E-10,1), breaks=c(1E-12,1E-6,0.001,0.01,0.1)) +
+  ## scale_alpha_manual(values=c(0.3, 1.0),guide=FALSE) +
   geom_hline(yintercept=0,lty=2) + 
   xlab("Gene") + ylab(expression(log[2](Fold~Change))) +
   theme_bw() +
@@ -300,8 +292,6 @@ res_select$padj[res_select$padj<1E-6]<- 1E-6
 
 
 ## forestPlot 
-#coloring
-
 
 
 
@@ -340,12 +330,11 @@ ggsave(paste0(outFolder,"forestPlot_SMC-1.pdf"),g,width=10,height=30)
 
 
 
-
-
-
 ###############################################################################
+## forestPlot SMC-1
 
-#res_smc1<-res %>% filter ( Cell_type=="Smooth muscle cells-1" & !is.na(padj))
+# padj <0.05  & abs(log2FoldChange)>1
+
 
 res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
 
@@ -361,12 +350,6 @@ res$Cell_type<-clust2Names[res$Cell_type]
 
 res_select<-res %>% filter (padj <0.05 & Cell_type=="Smooth muscle cells-1" & abs(log2FoldChange)>1)
 res_select$padj[res_select$padj<1E-6]<- 1E-6
-
-
-## forestPlot 
-#coloring
-
-
 
 
 p<-res_select %>% 
