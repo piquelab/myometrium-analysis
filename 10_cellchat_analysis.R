@@ -216,16 +216,17 @@ sapply(pathways,function(pathways.show){
 })
 
 
-
-
 #######################################################
 
-# top 10 % interactions per pathway
+# Top 10 % interactions per pathway (p <0.05)
+# Circle plots
 #######################################################
 
 
 pathways<-cellchat@netP$pathways
 system(paste0("mkdir -p ", outFolder,"Pathways_circleplots_top10/"))
+
+
 sapply(pathways,function(pathways.show){
   #pathways.show <- c("CXCL") 
   # Hierarchy plot
@@ -239,13 +240,11 @@ sapply(pathways,function(pathways.show){
 })
 
 
+
+# for manuscript, hiding the labels 
 pathways<-cellchat@netP$pathways
 system(paste0("mkdir -p ", outFolder,"Pathways_circleplots_white_labels_top10/"))
 sapply(pathways,function(pathways.show){
-  #pathways.show <- c("CXCL") 
-  # Hierarchy plot
-  # Here we define `vertex.receive` so that the left portion of the hierarchy plot shows signaling to fibroblast and the right portion shows signaling to immune cells 
-  #cellchat <- netAnalysis_computeCentrality(cellchat, slot.name = "netP")
   pdf(paste0(outFolder,"Pathways_circleplots_white_labels_top10/",pathways.show,".pdf"),width=25,height=25)
   par(mfrow=c(1,1))
   #arrow(length = unit(.02, "inches"),type = "closed",angle = 40)
@@ -254,7 +253,7 @@ sapply(pathways,function(pathways.show){
 })
 
 
-# Circle plot
+
 
 # Signaling role analysis on the aggregated cell-cell communication network from all signaling pathways
 
@@ -311,9 +310,11 @@ sapply(pathways,function(pathways.show){
 # netVisual_aggregate(cellchat, signaling =c("COLLAGEN","IFN-II","IL6","IL2","IL1"), layout = "circle",color.use=cluster.Colors[rownames(cellchat@net$weight)],vertex.label.cex=2,top=0.1,arrow.width = 8)
 # dev.off()
 
-#######################################################
-# ligand receptor information
-#######################################################
+###################################################################################
+# ligand receptor information per pathways
+###################################################################################
+
+
 pathways<-cellchat@netP$pathways
 system(paste0("mkdir -p ", outFolder,"Pathways_LR/"))
 sapply(pathways,function(pathways.show){
@@ -331,11 +332,10 @@ sapply(pathways,function(pathways.show){
 
 #pathways.show<-"COLLAGEN"
 #pathways.show<-"IFN-II"
-pathways.show<-"IL6"
+#pathways.show<-"IL6"
 #pathways.show<-"IL2"
-pathways.show<-"IL1"
-
-pathways.show<-c("COLLAGEN","IFN-II","IL6","IL1")
+#pathways.show<-"IL1"
+#pathways.show<-c("COLLAGEN","IFN-II","IL6","IL1")
 
 
 
@@ -363,25 +363,173 @@ res_list<-lapply(pathways.show,function(x){
 res_all<-do.call(rbind,res_list)
 write.csv(res_all,file=paste0(outFolder,"res_LR_pathways.csv"))
 
+
+
+
+#################################################################################
+
+# Making data frame, including pathways, ligand/receptors genes that are involved in those pathways and labor-associated DEGs , cell types with those DEGs, and their rowLogSumExps()
+
+
+#################################################################################
+pathways<-cellchat@netP$pathways
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/SIG.combined.2021-02-17.tsv")
+res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
+res <- res %>% filter(!is.na(pvalue))
+res<-res %>% filter(padj<0.1)
+clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+names(clust2Names)<-c(0:23)
+res$Cell_type<-clust2Names[res$Cell_type]
+
+cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D","#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","#2C3E18","#745B48","#AA5485","#4E747A","#C59A89","#C9C76F")   
+names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte", "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast", "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+
+
+
+load(paste0(outFolder,"cellchat.RData"))
+groupSize <- as.numeric(table(cellchat@idents))
+cellchat <- netAnalysis_computeCentrality(cellchat, slot.name = "netP")
+
+################################
+# pathway / ligand/receptor from pathways that are labor-associated DEGs / celltype with DEGs
+################################
+pathways_genes_celltypes<-lapply(pathways,function(x){
+  
+  pairLR <- extractEnrichedLR(cellchat, signaling = x, geneLR.return = FALSE)
+  LR_genes<-unique(unlist(str_split(pairLR$interaction_name,"_")))
+  
+  
+  celltypes<-res %>% filter(gene_name %in% LR_genes)%>% dplyr::select(Cell_type)%>% unlist %>% unique()
+  
+  LR_genes <-res %>% filter (gene_name %in% LR_genes) %>% dplyr::select(gene_name)%>% unlist %>% unique()
+  LR_genes<-paste(LR_genes,collapse = ", ")
+  
+  celltypes<-paste(celltypes,collapse = ", ")
+  if (celltypes=="") celltypes<-"NA"
+  return(c(x,LR_genes,celltypes))
+})
+
+pathways_genes_celltypes_db<-do.call(rbind,pathways_genes_celltypes)
+colnames(pathways_genes_celltypes_db)<-c("Pathway","Genes in pathway","Cell type")
+pathways_genes_celltypes_db<-as.data.frame(pathways_genes_celltypes_db)
+
+write.csv(pathways_genes_celltypes_db,file = paste0(outFolder,"pathways_genes_celltypes_db.csv"))
+
+
+################################
+# cells with sending role (from cellchat)
+################################
+senders<-lapply(pathways,function(x){
+  
+  scores<-cellchat@netP$centr[[x]]$outdeg
+  minx<-min(scores)
+  maxx<-max(scores)
+  scores_scaled<-sapply( scores, function(x){(x-minx)/(maxx-minx)})
+  senders<-names(scores_scaled)[which(scores_scaled>=0.75)]
+  roles<-rep("sender",length(senders))
+  path<-rep(x,length(senders))
+  return(cbind(senders,roles,path))
+})
+senders_df<-do.call(rbind,senders)
+
+
+
+################################
+# cells with receiving role (from cellchat)
+################################
+
+receiver<-lapply(pathways,function(x){
+  
+  scores<-cellchat@netP$centr[[x]]$indeg
+  minx<-min(scores)
+  maxx<-max(scores)
+  scores_scaled<-sapply( scores, function(x){(x-minx)/(maxx-minx)})
+  senders<-names(scores_scaled)[which(scores_scaled>=0.75)]
+  roles<-rep("receiver",length(senders))
+  path<-rep(x,length(senders))
+  return(cbind(senders,roles,path))
+})
+receiver_df<-do.call(rbind,receiver)
+
+
+################################
+# merging sender/receiever cells
+################################
+
+
+
+receiver_senders_df<-rbind(senders_df,receiver_df)
+colnames(receiver_senders_df)<-c("celltype","role","pathway")
+receiver_senders_df<-receiver_senders_df[!duplicated(receiver_senders_df), ]
+#receiver_senders_df<-receiver_senders_df[order(receiver_senders_df$pathway,decreasing = FALSE),]
+receiver_senders_df<-as.data.frame(receiver_senders_df)
+receiver_senders_df<-receiver_senders_df %>% arrange(pathway)
+
+#write.csv(receiver_senders_df,file=paste0(outFolder,"receiver_senders_df.csv"))
+write.csv(receiver_senders_df,file=paste0(outFolder,"receiver_senders_0.75_df.csv"))
+
+sender_receiver_columns<-sapply(1: nrow(pathways_genes_celltypes_db), function(x){
+  path<-pathways_genes_celltypes_db$Pathway[x]
+  celltypes<-pathways_genes_celltypes_db$`Cell type`[x]
+  celltypes<-unlist(strsplit(celltypes,", ",fixed=TRUE))
+  # senders<- receiver_senders_df %>% filter (pathway==path & celltype %in% celltypes & role=="sender") %>% select(celltype)%>% unlist %>% unique
+  # receivers<-receiver_senders_df %>% filter (pathway==path & celltype %in% celltypes & role=="receiver") %>% select(celltype)%>% unlist %>% unique
+  senders<- receiver_senders_df %>% filter (pathway==path &  role=="sender") %>% select(celltype)%>% unlist %>% unique
+  receivers<-receiver_senders_df %>% filter (pathway==path & role=="receiver") %>% select(celltype)%>% unlist %>% unique
+  
+  senders<-paste(senders,collapse = ", ")
+  receivers<-paste(receivers,collapse = ", ")
+  if (senders=="") senders<-"NA"
+  if (receivers=="") receivers<-"NA"
+  return(c(senders,receivers))
+})
+
+
+
+################################
+# make the final data frame 
+################################
+
+
+
+sender_receiver_columns<-t(sender_receiver_columns)
+pathways_genes_celltypes_db<-cbind(pathways_genes_celltypes_db,sender_receiver_columns)
+colnames(pathways_genes_celltypes_db)[c(4,5)]<-c("senders","receivers")
+pathways_genes_celltypes_roles_db<-pathways_genes_celltypes_db
+colnames(pathways_genes_celltypes_roles_db)[2]<-"Genes in pathway that are labor-associated DEGs"
+colnames(pathways_genes_celltypes_roles_db)[3]<-"Cell type with DEGs (genes from pathway)"
+colnames(pathways_genes_celltypes_roles_db)[c(4,5)]<-c("senders-cellchat"      ,    "receivers-cellchat"     )
+#write.csv(pathways_genes_celltypes_roles_db,file = paste0(outFolder,"pathways_genes_celltypes_roles_db.csv"))
+write.csv(pathways_genes_celltypes_roles_db,file = paste0(outFolder,"pathways_DEgenes_celltypes_roles_db.csv"))
+
+
+
+
 ###########################################################################################
-# Analyzing patterns 
+# Finding outgoing and incoming patterns 
 ###########################################################################################
 library(NMF)
 library(ggalluvial)
 
 
 outFolder="./10_CellChat_analysis_customized/"
+pathways.show<-c("contraction","COLLAGEN","LAMININ","MIF","GALECTIN","CCL","IL1","COMPLEMENT","PDGF","TNF","THY1","TGFb","IFN-II","IL6","IL2")
+
 load(paste0(outFolder,"cellchat.RData"))
 groupSize <- as.numeric(table(cellchat@idents))
 
+# selected pathways
 pathways.show<-c("contraction","COLLAGEN","LAMININ","MIF","GALECTIN","CCL","IL1","COMPLEMENT","PDGF","TNF","THY1","TGFb","IFN-II","IL6","IL2")
 
 
 # finding the best number of patterns based on cophenetic and silouette metrics
 
+# choozing best number of outgoing patterns
 # pdf(paste0(outFolder,"n_pattern_outgoing.pdf"),width=25,height=10)
 # selectK(cellchat, pattern = "outgoing")
 # dev.off()
+
+# nPatterns=3 is chosen based on previous plot 
 nPatterns = 3
 cellchat <- identifyCommunicationPatterns(cellchat, pattern = "outgoing", k = nPatterns)
 
@@ -391,9 +539,12 @@ netAnalysis_river(cellchat, pattern = "outgoing",color.use=cluster.Colors[rownam
 dev.off()
 
 
+# choozing best number of incoming patterns
 # pdf(paste0(outFolder,"n_pattern_incoming.pdf"),width=25,height=10)
 # selectK(cellchat, pattern = "incoming")
 # dev.off()
+
+# nPatterns=3 is chosen based on previous plot 
 nPatterns = 3
 cellchat <- identifyCommunicationPatterns(cellchat, pattern = "incoming", k = nPatterns)
 
@@ -423,9 +574,12 @@ dev.off()
 # dev.off()
 
 
-
-cutoff<-0.5
+# Threshold for contribution 
+#cutoff<-0.5
 cutoff<-0.7
+
+
+
 outgoing_signaling<-cellchat@netP$pattern$outgoing$pattern$signaling
 outgoing_signaling<-outgoing_signaling %>% filter(Contribution>cutoff)
 #outgoing_signaling$Contribution[outgoing_signaling$Contribution < cutoff] <- 0
@@ -434,56 +588,49 @@ outgoing_signaling<-outgoing_signaling %>% filter(Contribution>cutoff)
 colnames(outgoing_signaling)[3]<-"Contribution_outgoing_signaling"
 colnames(outgoing_signaling)[1]<-paste0(colnames(outgoing_signaling)[1],"_outgoing")
 
-
 outgoing_cell<-cellchat@netP$pattern$outgoing$pattern$cell
 outgoing_cell<-outgoing_cell %>% filter(Contribution>cutoff)
 #outgoing_cell$Contribution[outgoing_cell$Contribution < cutoff] <- 0
 colnames(outgoing_cell)[3]<-"Contribution_outgoing_cell"
 colnames(outgoing_cell)[2]<-paste0(colnames(outgoing_cell)[2],"_outgoing")
-
-
-
 outgoing_data<-outgoing_signaling %>% inner_join(outgoing_cell)
-
-pathways.show<-c("contraction","COLLAGEN","LAMININ","MIF","GALECTIN","CCL","IL1","COMPLEMENT","PDGF","TNF","THY1","TGFb","IFN-II","IL6","IL2")
-
 outgoing_data<-outgoing_data %>% filter(Signaling %in% pathways.show)
+
+
 
 
 incoming_signaling<-cellchat@netP$pattern$incoming$pattern$signaling
 incoming_signaling<-incoming_signaling %>% filter(Contribution>cutoff)
 #incoming_signaling$Contribution[incoming_signaling$Contribution < cutoff] <- 0
-
 colnames(incoming_signaling)[3]<-"Contribution_incoming_signaling"
 colnames(incoming_signaling)[1]<-paste0(colnames(incoming_signaling)[1],"_incoming")
-
-
-
 incoming_cell<-cellchat@netP$pattern$incoming$pattern$cell
 incoming_cell<-incoming_cell %>% filter(Contribution>cutoff)
 #incoming_cell$Contribution[incoming_cell$Contribution < cutoff] <- 0
-
 colnames(incoming_cell)[3]<-"Contribution_incoming_cell"
 colnames(incoming_cell)[2]<-paste0(colnames(incoming_cell)[2],"_incoming")
 
 
-incoming_data<-incoming_signaling %>% inner_join(incoming_cell)
 
+# Joining incoming and outgoing 
+incoming_data<-incoming_signaling %>% inner_join(incoming_cell)
 incoming_data<-incoming_data %>% filter(Signaling %in% pathways.show)
 
 
 outgoing_data<-outgoing_data %>% mutate(CellGroup_outgoing=CellGroup)#,Signaling,Contribution-outgoing_cell,Contribution_outgoing_signaling)
-
 incoming_data<-incoming_data %>% mutate(CellGroup_incoming=CellGroup)#,Signaling,Contribution_incoming_signal,Contribution_incoming_cell)
-
 
 signalins_incoming<-unique(incoming_data$Signaling)
 outgoing_incoming<-unique(outgoing_data$Signaling)
 overlap_signalings<-intersect(signalins_incoming,outgoing_incoming)
 
 
-library(ggalluvial)
 
+########### 
+# ploting patterns 
+# refer to 10_alluvial_plot.R (the same code)
+
+library(ggalluvial)
 outgoing_data<- outgoing_data %>% filter(Signaling %in% overlap_signalings)
 outgoing_data$Signaling<-as.character(outgoing_data$Signaling)
 outgoing_data<-outgoing_data[order(outgoing_data$Signaling,decreasing = FALSE),]
@@ -505,8 +652,6 @@ ggplot(data = outgoing_data,
 dev.off()
 
 
-
-#incoming_data<-incoming_data %>% arrange(factor(Signaling, levels = singnaling_sort))
 
 incoming_data<- incoming_data %>% filter(Signaling %in% overlap_signalings)
 incoming_data$Signaling<-as.character(incoming_data$Signaling)
@@ -564,109 +709,3 @@ dev.off()
 
 
 
-
-#################################################################################
-pathways<-cellchat@netP$pathways
-res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/SIG.combined.2021-02-17.tsv")
-res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
-res <- res %>% filter(!is.na(pvalue))
-res<-res %>% filter(padj<0.1)
-clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
-names(clust2Names)<-c(0:23)
-res$Cell_type<-clust2Names[res$Cell_type]
-
-cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D","#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","#2C3E18","#745B48","#AA5485","#4E747A","#C59A89","#C9C76F")   
-names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte", "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast", "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
-#outFolder="./10_CellChat_analysis_default/"
-system(paste0("mkdir -p ", outFolder))
-
-
-load(paste0(outFolder,"cellchat.RData"))
-groupSize <- as.numeric(table(cellchat@idents))
-cellchat <- netAnalysis_computeCentrality(cellchat, slot.name = "netP")
-pathways_genes_celltypes<-lapply(pathways,function(x){
-  
-  pairLR <- extractEnrichedLR(cellchat, signaling = x, geneLR.return = FALSE)
-  LR_genes<-unique(unlist(str_split(pairLR$interaction_name,"_")))
-  
-  
-  celltypes<-res %>% filter(gene_name %in% LR_genes)%>% dplyr::select(Cell_type)%>% unlist %>% unique()
-  
-  LR_genes <-res %>% filter (gene_name %in% LR_genes) %>% dplyr::select(gene_name)%>% unlist %>% unique()
-  LR_genes<-paste(LR_genes,collapse = ", ")
-  
-  celltypes<-paste(celltypes,collapse = ", ")
-  if (celltypes=="") celltypes<-"NA"
-  return(c(x,LR_genes,celltypes))
-})
-
-pathways_genes_celltypes_db<-do.call(rbind,pathways_genes_celltypes)
-colnames(pathways_genes_celltypes_db)<-c("Pathway","Genes in pathway","Cell type")
-pathways_genes_celltypes_db<-as.data.frame(pathways_genes_celltypes_db)
-
-write.csv(pathways_genes_celltypes_db,file = paste0(outFolder,"pathways_genes_celltypes_db.csv"))
-
-
-senders<-lapply(pathways,function(x){
-  
-  scores<-cellchat@netP$centr[[x]]$outdeg
-  minx<-min(scores)
-  maxx<-max(scores)
-  scores_scaled<-sapply( scores, function(x){(x-minx)/(maxx-minx)})
-  senders<-names(scores_scaled)[which(scores_scaled>=0.75)]
-  roles<-rep("sender",length(senders))
-  path<-rep(x,length(senders))
-  return(cbind(senders,roles,path))
-  })
-senders_df<-do.call(rbind,senders)
-
-
-
-receiver<-lapply(pathways,function(x){
-  
-  scores<-cellchat@netP$centr[[x]]$indeg
-  minx<-min(scores)
-  maxx<-max(scores)
-  scores_scaled<-sapply( scores, function(x){(x-minx)/(maxx-minx)})
-  senders<-names(scores_scaled)[which(scores_scaled>=0.75)]
-  roles<-rep("receiver",length(senders))
-  path<-rep(x,length(senders))
-  return(cbind(senders,roles,path))
-})
-receiver_df<-do.call(rbind,receiver)
-
-receiver_senders_df<-rbind(senders_df,receiver_df)
-colnames(receiver_senders_df)<-c("celltype","role","pathway")
-receiver_senders_df<-receiver_senders_df[!duplicated(receiver_senders_df), ]
-#receiver_senders_df<-receiver_senders_df[order(receiver_senders_df$pathway,decreasing = FALSE),]
-receiver_senders_df<-as.data.frame(receiver_senders_df)
-receiver_senders_df<-receiver_senders_df %>% arrange(pathway)
-
-#write.csv(receiver_senders_df,file=paste0(outFolder,"receiver_senders_df.csv"))
-write.csv(receiver_senders_df,file=paste0(outFolder,"receiver_senders_0.75_df.csv"))
-
-sender_receiver_columns<-sapply(1: nrow(pathways_genes_celltypes_db), function(x){
-  path<-pathways_genes_celltypes_db$Pathway[x]
-  celltypes<-pathways_genes_celltypes_db$`Cell type`[x]
-  celltypes<-unlist(strsplit(celltypes,", ",fixed=TRUE))
-  # senders<- receiver_senders_df %>% filter (pathway==path & celltype %in% celltypes & role=="sender") %>% select(celltype)%>% unlist %>% unique
-  # receivers<-receiver_senders_df %>% filter (pathway==path & celltype %in% celltypes & role=="receiver") %>% select(celltype)%>% unlist %>% unique
-  senders<- receiver_senders_df %>% filter (pathway==path &  role=="sender") %>% select(celltype)%>% unlist %>% unique
-  receivers<-receiver_senders_df %>% filter (pathway==path & role=="receiver") %>% select(celltype)%>% unlist %>% unique
-  
-  senders<-paste(senders,collapse = ", ")
-  receivers<-paste(receivers,collapse = ", ")
-  if (senders=="") senders<-"NA"
-  if (receivers=="") receivers<-"NA"
-  return(c(senders,receivers))
-})
-sender_receiver_columns<-t(sender_receiver_columns)
-pathways_genes_celltypes_db<-cbind(pathways_genes_celltypes_db,sender_receiver_columns)
-colnames(pathways_genes_celltypes_db)[c(4,5)]<-c("senders","receivers")
-pathways_genes_celltypes_roles_db<-pathways_genes_celltypes_db
-colnames(pathways_genes_celltypes_roles_db)[2]<-"Genes in pathway that are labor-associated DEGs"
-colnames(pathways_genes_celltypes_roles_db)[3]<-"Cell type with DEGs (genes from pathway)"
-colnames(pathways_genes_celltypes_roles_db)[c(4,5)]<-c("senders-cellchat"      ,    "receivers-cellchat"     )
-#write.csv(pathways_genes_celltypes_roles_db,file = paste0(outFolder,"pathways_genes_celltypes_roles_db.csv"))
-
-write.csv(pathways_genes_celltypes_roles_db,file = paste0(outFolder,"pathways_DEgenes_celltypes_roles_db.csv"))
