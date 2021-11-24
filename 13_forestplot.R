@@ -4,6 +4,11 @@ library(dplyr)
 library(org.Hs.eg.db)
 
 
+##################################################################
+### Forest plot on genes that were previously generated for meta plots (cell type specific genes)
+
+# Based on meta plots generated from mashr analysis 
+##################################################################
 
 
 outFolder<-"./13_forestPlots/"
@@ -15,23 +20,18 @@ genes<-list.files(paste0("8_outputs_DESeq_batch_library_Plots/meta_plots_selecte
 genes<-unlist(str_split(genes,".pdf"))[seq(1,2*length(genes),by=2)]
 
 
-
-
 cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D","#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","2C3E18","#745B48","#AA5485","#4E747A","#C59A89","#C9C76F")   
 names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte", "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
 
 
 
 # All DE genes from single cell analysis
-#res <- read_tsv("7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
 res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-10-18.tsv")
-
 # Adding location, cell type, and origin columns 
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
 res <- res %>% filter(!is.na(pvalue))
-
 res <- res %>% filter(!is.na(pvalue))
-#res$Cell_type<-clust2Names[res$Cell_type]
+
 #anno <- read_rds("3_MergeDemux_Output/anno.rds")
 eg = bitr(res$gene_name, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
 names(eg)[1]="gene_name"
@@ -56,14 +56,9 @@ res$Cell_type<-clust2Names[res$Cell_type]
 # 
 # res_genes<-res[res$gene_name %in% onlyMonocyte,]
 
-
-
-  
 res_genes<-res[res$gene_name %in% genes,]
 
 unique(res_genes$gene_name)
-
-
 
 #outFolder<-"./13_forestPlots/OnlyMonocyte/"
 #outFolder<-"./8_outputs_DESeq/"
@@ -90,10 +85,6 @@ sapply(allgenes, function(gene_show){
     theme(axis.text=element_text(size=20),strip.text.y = element_text(angle = 0,hjust=0,vjust=0.5),strip.background=element_rect(fill="white",color="white")) +
     coord_flip()+
     xlab(NULL)
-  #facet_grid(gene_name ~ Cell_type) 
-  ##facet_grid(~gene_name ) 
-  #facet_grid(gene_name ~  ,scales = "free_y",space="free") 
-  
   ggsave(paste0(outFolder,gene_show,".pdf"),p,width=10,height=8)
   
 })
