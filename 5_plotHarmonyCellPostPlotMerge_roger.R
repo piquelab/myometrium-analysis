@@ -71,6 +71,12 @@ table(md$scLabor_ID, md$Location)
 
 table(md$SNG.BEST.GUESS, md$scLabor_ID)
 
+pregtable <- table(md$Pregnancy_ID,sc$Library)
+
+
+
+pregtable %>% as.data.frame %>% filter(Freq>0) %>% arrange(Var2) %>% write_tsv("pregtable.tsv")
+
 
 cc <- md %>% select(seurat_clusters,scLabor_ID) %>%
     group_by(seurat_clusters,scLabor_ID) %>%

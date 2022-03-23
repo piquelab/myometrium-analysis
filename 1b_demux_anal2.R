@@ -60,3 +60,8 @@ write_tsv(cc.wider,paste0(outFolder,"cc.wider_7only.tsv"))
 #write_tsv(cell.counts,paste0(outFolder,"cell.counts.tsv"))
 write_tsv(cell.counts,paste0(outFolder,"cell.counts_7only.tsv"))
 
+mat<-table(sc$Pregnancy_ID,sc$Library)
+lib_preg<-which(mat!=0,arr.ind = TRUE)
+lib_preg[,2]<-colnames(mat)[lib_preg[,2]]
+lib_preg<-cbind(lib_preg,rownames(lib_preg))
+write.csv(lib_preg, paste0(outFolder,"library_pregnancy.csv"))

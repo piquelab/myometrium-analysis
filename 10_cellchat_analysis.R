@@ -235,7 +235,7 @@ sapply(pathways,function(pathways.show){
   pdf(paste0(outFolder,"Pathways_circleplots_top10/",pathways.show,".pdf"),width=25,height=25)
   par(mfrow=c(1,1))
   #arrow(length = unit(.02, "inches"),type = "closed",angle = 40)
-  netVisual_aggregate(cellchat, signaling = pathways.show[1], layout = "circle",color.use=cluster.Colors[rownames(cellchat@net$weight)],vertex.label.cex=2,top=0.10,arrow.width = 15)
+  netVisual_aggregate(cellchat, signaling = pathways.show, layout = "circle",color.use=cluster.Colors[rownames(cellchat@net$weight)],vertex.label.cex=2,top=0.10,arrow.width = 15)
   dev.off()
 })
 
@@ -248,7 +248,7 @@ sapply(pathways,function(pathways.show){
   pdf(paste0(outFolder,"Pathways_circleplots_white_labels_top10/",pathways.show,".pdf"),width=25,height=25)
   par(mfrow=c(1,1))
   #arrow(length = unit(.02, "inches"),type = "closed",angle = 40)
-  netVisual_aggregate(cellchat, signaling = pathways.show[1], layout = "circle",color.use=cluster.Colors[rownames(cellchat@net$weight)],vertex.label.cex=0.0001,top=0.10,arrow.width = 15,vertex.label.color="white")
+  netVisual_aggregate(cellchat, signaling = pathways.show, layout = "circle",color.use=cluster.Colors[rownames(cellchat@net$weight)],vertex.label.cex=0.0001,top=0.10,arrow.width = 15,vertex.label.color="white")
   dev.off()
 })
 

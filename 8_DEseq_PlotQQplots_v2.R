@@ -15,7 +15,7 @@ system(paste0("mkdir -p ",outFolder))
 # load single cell data 
 
 ########################################################
-res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
+#res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster/ALL.combined.2021-02-17.tsv")
 res <- read_tsv("./7_outputs_DESeq_ConditionsByCluster_bath_library/ALL.combined.2021-08-30.tsv")
 
 res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)

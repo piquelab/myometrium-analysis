@@ -20,7 +20,7 @@ nPatterns = 3
 
 # filter out weak links (contribution score)
 
-cutoff<-0.5
+#cutoff<-0.5
 cutoff<-0.7
 
 
@@ -144,6 +144,86 @@ ggplot(data = incoming_data,
 dev.off()
 
 
+
+
+#######################################################
+# cellchat table 7
+#######################################################
+
+total_signalings<-unique(c(incoming_data$Signaling, outgoing_data$Signaling))
+
+incoming_data_df<-incoming_data %>% select(Signaling,CellGroup_incoming)
+outgoing_data_df<-outgoing_data  %>% select(Signaling,CellGroup_outgoing)
+data<-incoming_data_df %>% full_join (outgoing_data_df)
+
+senders<-sapply(unique(as.character(data$Signaling)), function(x)
+  {
+  sender<-data %>% filter (Signaling ==x) %>% select (CellGroup_outgoing) %>% unlist %>% unique
+  sender<-as.character(sender)
+  sender<-paste(sender,collapse = ", ")
+  sender
+  
+  })
+
+
+receivers<-sapply(unique(as.character(data$Signaling)), function(x)
+  {
+  receiever<-data %>% filter (Signaling ==x) %>% select (CellGroup_incoming) %>% unlist %>% unique
+  receiever<-as.character(receiever)
+  receiever<-paste(receiever,collapse = ", ")
+  receiever
+  })
+# 
+
+
+
+
+
+
+groupSize <- as.numeric(table(cellchat@idents))
+cellchat <- netAnalysis_computeCentrality(cellchat, slot.name = "netP")
+
+################################
+# pathway / ligand/receptor from pathways that are labor-associated DEGs / celltype with DEGs
+################################
+
+res <- read_tsv("7_outputs_DESeq_ConditionsByCluster_bath_library/SIG.combined.2021-02-17.tsv")
+res <- res %>% separate(cname,c("Cell_type","Origin"),sep="_",remove=FALSE)
+res <- res %>% filter(!is.na(pvalue))
+res<-res %>% filter(padj<0.1)
+clust2Names<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte","CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast","Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+names(clust2Names)<-c(0:23)
+res$Cell_type<-clust2Names[res$Cell_type]
+
+cluster.Colors<-c("#DF7D99","#838EDF","#4E65A6","#FFC000","#2BA3D3","#9ABF5C","#D14357","#329B2D","#D5438E","#ED4315","#76956C","#7BC791","#CA8588","#F88091","#72C6C8","#E4652C","#9B91B9","#A37584","#2C3E18","#745B48","#AA5485","#4E747A","#C59A89","#C9C76F")   
+names(cluster.Colors)<-c("Stromal-1","Macrophage-2","Macrophage-1","Endothelial-1","Monocyte", "CD4_T-cell","Decidual","CD8_T-cell","LED","Stromal-2","ILC","NK-cell","Smooth muscle cells-1","Myofibroblast", "Macrophage-3","Endothelial-2","DC","Smooth muscle cells-2","EVT","Plasmablast","Smooth muscle cells-3","Macrophage-4","B-cell","Unciliated Epithelial")
+
+
+
+pathways_genes_celltypes<-lapply(unique(as.character(data$Signaling)),function(x){
+  
+  pairLR <- extractEnrichedLR(cellchat, signaling = x, geneLR.return = FALSE)
+  LR_genes<-unique(unlist(str_split(pairLR$interaction_name,"_")))
+  
+  
+  celltypes<-res %>% filter(gene_name %in% LR_genes)%>% dplyr::select(Cell_type)%>% unlist %>% unique()
+  
+  LR_genes <-res %>% filter (gene_name %in% LR_genes) %>% dplyr::select(gene_name)%>% unlist %>% unique()
+  LR_genes<-paste(LR_genes,collapse = ", ")
+  
+  celltypes<-paste(celltypes,collapse = ", ")
+  if (celltypes=="") celltypes<-"NA"
+  return(c(x,LR_genes,celltypes))
+})
+
+
+pathways_genes_celltypes_db<-do.call(rbind,pathways_genes_celltypes)
+colnames(pathways_genes_celltypes_db)<-c("Pathway","Genes in pathway","Cell type")
+pathways_genes_celltypes_db<-as.data.frame(pathways_genes_celltypes_db)
+
+
+final<-cbind(pathways_genes_celltypes_db,senders,receivers)
+write.csv(final,file=paste0(outFolder,"cellchat_table.csv"))
 
 
 # fname=paste0(outFolder,"incoming_ggalluvial.cuttof.0.7.pdf");

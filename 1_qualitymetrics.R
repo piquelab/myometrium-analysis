@@ -38,10 +38,12 @@ percent.mt<-VlnPlot(sc, group.by = "orig.ident", features = "percent.mt", pt.siz
 nFeature_RNA_metric<-tapply(nFeature_RNA$data$nFeature_RNA, nFeature_RNA$data$ident,mean)
 nCount_RNA_metric<-tapply(nCount_RNA$data$nCount_RNA, nCount_RNA$data$ident,mean)
 percent.mt_metric<-tapply(percent.mt$data$percent.mt, percent.mt$data$ident,mean)
+UMIs<-tapply(nCount_RNA$data$nCount_RNA, nCount_RNA$data$ident,sum)
 
-qc<-cbind(nFeature_RNA_metric,nCount_RNA_metric,percent.mt_metric)
-colnames(qc)<-c("nFeature_RNA","nCount_RNA","percent.mt")
+qc<-cbind(nFeature_RNA_metric,nCount_RNA_metric,percent.mt_metric,UMIs)
+colnames(qc)<-c("nFeature_RNA","nCount_RNA","percent.mt","UMIs")
 write.csv(qc,file=paste0(outFolder,"quality_metrics.csv"))
 
 doner_cellcounts<-table(sc$Pregnancy_ID)
 write.csv(doner_cellcounts,file="1_quality_metrics/doner_cellcounts.csv")
+

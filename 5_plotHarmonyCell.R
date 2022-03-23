@@ -15,11 +15,11 @@ options(future.globals.maxSize = 30 * 1024 ^ 3)
 
 
 ###########################################
-sc <- readRDS("4_harmony_cellClass/sc.NormByLibrary.cellclassify_res0.1.rds")
+#sc <- readRDS("4_harmony_cellClass/sc.NormByLibrary.cellclassify_res0.1.rds")
 
-sc <- readRDS("4_harmony_cellClass/sc.NormByLibrary.cellclassify_res0.3.rds")
+#sc <- readRDS("4_harmony_cellClass/sc.NormByLibrary.cellclassify_res0.3.rds")
 
-
+sc <- readRDS("6_harmony_cellClass_plots_res0.8_final/SeuratObject.rds")
 #samples<-read_tsv("Bacteria_inducedPTLproject-Details.txt")
 #colnames(samples)[1]<-"Library"
 # md <- read_rds("./4_harmony_cellClass_PBMC/sc.NormByLocation.ref.Anchors.rds") %>%
@@ -38,8 +38,10 @@ sc <- readRDS("4_harmony_cellClass/sc.NormByLibrary.cellclassify_res0.3.rds")
 md<-sc@meta.data
 
 
+# outFolder="5_harmony_cellClass_plots/"
+# outFolder="5_harmony_cellClass_plots0.1/"
+
 outFolder="5_harmony_cellClass_plots/"
-outFolder="5_harmony_cellClass_plots0.1/"
 system(paste0("mkdir -p ", outFolder))
 
 
@@ -318,6 +320,8 @@ aa$seurat_clusters <- factor(aa$seurat_clusters,levels=unique(aa$seurat_clusters
 aa$cluster_name <- factor(aa$cluster_name,levels=unique(aa$cluster_name))
 
 
+
+#source("theme_black.R")
 fname=paste0(outFolder,"UMAP_LocationCondition.Barplot.pdf");
 pdf(fname,width=10,height=6)
 p2 <- ggplot(aa,aes(x=reorder(cluster_name,-seurat_clusters),fill=Condition)) +
@@ -327,7 +331,8 @@ p2 <- ggplot(aa,aes(x=reorder(cluster_name,-seurat_clusters),fill=Condition)) +
     facet_grid(.~Location) + coord_flip() +
     scale_fill_manual(values=c("TNL"="#333399","TIL"="#A50021"))+
     xlab("")+
-    theme_bw()
+   theme_bw()
+    #theme_black()
 p2
 ##    theme_black()
 dev.off()
